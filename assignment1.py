@@ -41,7 +41,6 @@ def type_1b(S1, S2, K1, K2, v_max):
 def type_2(S1, S2, K1, K2, v_max):
     return (v_max * S1 * S2) / (K2 * S1 + K1 * S2 + S1 * S2)
 
-
 # Defining goodness of fit measures
 def r_squared(y, y_fit):
     """
@@ -202,51 +201,33 @@ def plot_lineweaver_burk(best_model, params, s2_targets):
     plt.show()
 
 # Defining functions to compute Km2 from K1 and Vmax from Type 2 model 
-def compute_km2(K1_vals, vmax_vals, data):
+def compute_km2(K1_vals, vmax_vals, s2_targets, best_model, params):
     """
-    Computes Km2 using the Type 2 velocity equation and know
-    n K1, Vmax values.
+    Computes Km2 using the Type 2 velocity equation and known K1, Vmax values,
+    generating v using the best model.
     """
-    for idx, (S2, s1_array, v_array) in enumerate(data):
-        S1 = s1_array[idx]
-        v = v_array[idx]
+
+    for idx, S2 in enumerate(s2_targets):
         vmax = vmax_vals[idx]
         K1 = K1_vals[idx]
 
+        S1 = 1.0 # Constant S1 for calculation
+        v = best_model(S1, S2, *params) # Calculate v using the best model
+
         # Derived from type 2 model: v = (vmax * s1 * s2) / (K1 * s2 + K2 * s1 + s1 * s2)
         K2 = (vmax * S1 * S2 - v * K1 * S2 - v * S1 * S2) / (v * S1)
-        print(f"S2 = {S2:.2f}, Km1 = {K1:.4f}, Km2 = {K2:.4f}, Vmax = {vmax:.4f}")
+        print(f"For S2 = {S2:.1f}: Km1 = {K1:0.4f}, Km2 = {K2:0.4f}, Vmax = {vmax:.4f}")
 
-def analyze_kinetics_with_data(data, best_model, params, s2_targets):
-    """
-    Groups S1, S2, and Rate data by selected S2 values and performs full kinetic analysis.
-    """
-    s1_all = data['S1'].to_numpy()
-    rate_all = data['Rate'].to_numpy()
-    s2_all = data['S2'].to_numpy()
-
-    grouped_data = []
-
-    for s2_val in s2_targets:
-        mask = s2_all == s2_val
-        s1_subset = s1_all[mask]
-        rate_subset = rate_all[mask]
-        grouped_data.append((s2_val, s1_subset, rate_subset))
-    
-    K1_vals, vmax_vals = plot_eadie_hofstee(best_model, params, s2_targets)
-    compute_km2(K1_vals, vmax_vals, grouped_data)
-    plot_lineweaver_burk(best_model, params, s2_targets)
-
-if __name__ == "__main__": 
+if __name__ == "__main__":
     kinetics_data = import_kinetics_data('kinetics.csv')
     if kinetics_data is not None:
-        S1, S2, rate, x_input = prepare_kinetics_input(kinetics_data)
         models = {
             "Type 1a": type_1a,
             "Type 2": type_2
         }
+
         best_model, best_params = run_all_models(kinetics_data, models)
         s2_targets = [1.5, 2.5, 5]
-        run_all_models(kinetics_data, models)
-        analyze_kinetics_with_data(kinetics_data, best_model, best_params, s2_targets)
-
+        K1_vals, vmax_vals = plot_eadie_hofstee(best_model, best_params, s2_targets)
+        compute_km2(K1_vals, vmax_vals, s2_targets, best_model, best_params)
+        plot_lineweaver_burk(best_model, best_params, s2_targets)
