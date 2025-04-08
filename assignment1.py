@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.optimize as sp
 import numpy as np
+import os
 
 # Importing and preparing kinetics data
 def import_kinetics_data(file_path, s2_threshold=1.0):
@@ -109,6 +110,8 @@ def evaluate_fit(model_type, S1, S2, rate, params):
     fitted_data = model_type(S1, S2, *params)
     r2 = r_squared(rate, fitted_data)
     chi2 = chi_squared(rate, fitted_data)
+    print('r2', r2)
+    print('chi2', chi2)
     return r2, chi2
 
 def run_all_models(data, models):
@@ -140,7 +143,7 @@ def run_all_models(data, models):
 
 
 # Defining functions to plot Eadie-Hofstee and Lineweaver-Burk plots
-def plot_eadie_hofstee(best_model, params, s2_targets):
+def plot_eadie_hofstee(best_model, params, s2_targets, save_plots):
     """
     Outputs an Eadie-Hofstee plot for the given data using the best model.
     """
@@ -170,11 +173,16 @@ def plot_eadie_hofstee(best_model, params, s2_targets):
     plt.title("Eadie-Hofstee Plot")
     plt.legend()
     plt.grid(True)
-    plt.show()
-
+    
+    if save_plots:
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        plt.savefig(os.path.join(desktop_path, "eadie_hofstee_plot.png"), dpi=300)
+    else:
+        plt.show()
+    
     return K1_vals, vmax_vals
 
-def plot_lineweaver_burk(best_model, params, s2_targets):
+def plot_lineweaver_burk(best_model, params, s2_targets, save_plots):
     """
     Outputs a Lineweaver-Burk plot for the given data
     """
@@ -198,7 +206,11 @@ def plot_lineweaver_burk(best_model, params, s2_targets):
     plt.title("Lineweaver-Burk Plot")
     plt.legend()
     plt.grid(True)
-    plt.show()
+    if save_plots:
+        plt.savefig(os.path.join(desktop_path, "lineweaver_burk_plot.png"), dpi=300)
+        plt.close()
+    else:
+        plt.show()
 
 # Defining functions to compute Km2 from K1 and Vmax from Type 2 model 
 def compute_km2(K1_vals, vmax_vals, s2_targets, best_model, params):
@@ -225,9 +237,15 @@ if __name__ == "__main__":
             "Type 1a": type_1a,
             "Type 2": type_2
         }
+        
+        #Used to save plots
+        save_plots=True
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 
         best_model, best_params = run_all_models(kinetics_data, models)
         s2_targets = [1.5, 2.5, 5]
-        K1_vals, vmax_vals = plot_eadie_hofstee(best_model, best_params, s2_targets)
+        K1_vals, vmax_vals = plot_eadie_hofstee(best_model, best_params, s2_targets, save_plots) 
         compute_km2(K1_vals, vmax_vals, s2_targets, best_model, best_params)
-        plot_lineweaver_burk(best_model, best_params, s2_targets)
+        plot_lineweaver_burk(best_model, best_params, s2_targets, save_plots)
+
+        
