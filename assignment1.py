@@ -140,7 +140,7 @@ def run_all_models(data, models):
 
 
 # Defining functions to plot Eadie-Hofstee and Lineweaver-Burk plots
-def plot_eadie_hofstee(best_model, params, s2_targets):
+def plot_eadie_hofstee(best_model, best_params, s2_targets):
     """
     Outputs an Eadie-Hofstee plot for the given data using the best model.
     """
@@ -150,14 +150,13 @@ def plot_eadie_hofstee(best_model, params, s2_targets):
 
     for S2 in s2_targets:
         S1 = np.linspace(0.1, 10, 100)  
-        v = best_model(S1, S2, *params)  # Use the best model to calculate rates
+        v = best_model(S1, S2, *best_params)  # Use the best model to calculate rates
         v_over_s1 = v / S1
         plt.scatter(v_over_s1, v, label=f"S2 = {S2} mM")
 
         # Linear regression
         slope, intercept = np.polyfit(v_over_s1, v, 1)
         K1, vmax = -slope, intercept
-
         K1_vals.append(K1)
         vmax_vals.append(vmax)
 
@@ -174,7 +173,7 @@ def plot_eadie_hofstee(best_model, params, s2_targets):
 
     return K1_vals, vmax_vals
 
-def plot_lineweaver_burk(best_model, params, s2_targets):
+def plot_lineweaver_burk(best_model, best_params, s2_targets):
     """
     Outputs a Lineweaver-Burk plot for the given data
     """
@@ -184,7 +183,7 @@ def plot_lineweaver_burk(best_model, params, s2_targets):
     for S2 in s2_targets:
         S1 = np.linspace(0.1, 10, 100)
         inv_s1 = 1 / S1
-        v = best_model(S1, S2, *params)
+        v = best_model(S1, S2, *best_params)
         inv_v = 1 / v
         plt.scatter(inv_s1, inv_v, label=f"S2 = {S2} mM")
 
@@ -201,25 +200,24 @@ def plot_lineweaver_burk(best_model, params, s2_targets):
     plt.show()
 
 # Defining functions to compute Km2 from K1 and Vmax from Type 2 model 
-def compute_km2(K1_vals, vmax_vals, s2_targets, best_model, params):
+def compute_km2(K1_vals, vmax_vals, s2_targets, best_model, best_params):
     """
     Computes Km2 using the Type 2 velocity equation and known K1, Vmax values,
     generating v using the best model.
     """
 
     for idx, S2 in enumerate(s2_targets):
+        S1 = 1.0 # Constant S1 for calculation
         vmax = vmax_vals[idx]
         K1 = K1_vals[idx]
-
-        S1 = 1.0 # Constant S1 for calculation
-        v = best_model(S1, S2, *params) # Calculate v using the best model
-
+        K2 = best_params[1]
+        v = best_model(S1, S2, K1, K2, vmax)
         # Derived from type 2 model: v = (vmax * s1 * s2) / (K1 * s2 + K2 * s1 + s1 * s2)
         K2 = (vmax * S1 * S2 - v * K1 * S2 - v * S1 * S2) / (v * S1)
-        print(f"For S2 = {S2:.1f}: Km1 = {K1:0.4f}, Km2 = {K2:0.4f}, Vmax = {vmax:.4f}")
+        print(f"For S2 = {S2:.1f}: Km1 = {K1:0.4f}, Km2 = {K2:0.4f}, Vmax = {vmax:.4f}, v = {v:0.4f}")
 
 if __name__ == "__main__":
-    kinetics_data = import_kinetics_data('kinetics.csv')
+    kinetics_data = import_kinetics_data('Kinetics.csv')
     if kinetics_data is not None:
         models = {
             "Type 1a": type_1a,
