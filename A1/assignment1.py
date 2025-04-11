@@ -27,12 +27,6 @@ def prepare_kinetics_input(data):
     return S1, S2, rate, x_input
 
 # Defining functions to determine underlying enzyme kinetics
-def linear(x, a, b):
-    return a * x + b
-
-def sqrt_func(x, a, b):
-    return a * np.sqrt(x) + b
-
 def type_1a(S1, S2, Kis1, Km1, v_max):
     return (v_max * S1 * S2) / (Kis1 * Km1 + Km1 * S1 + S1 * S2)
 
@@ -57,39 +51,6 @@ def chi_squared(y, y_fit):
     and fitted data.
     """
     return np.sum(((y - y_fit) ** 2) / y_fit)
-
-# Defining functions to plot linear and square root fit
-def plot_linear_fit(s1_data, s2_data, rate_data):
-    """
-    Plots the linear fit of the kinetics data
-    """
-    params_linear, _ = sp.curve_fit(linear, s1_data, rate_data)
-    x_fit = np.linspace(0, 1, 10)
-    plt.figure()
-    plt.scatter(s1_data, rate_data, label='S1')
-    plt.scatter(s2_data, rate_data, label='S2')
-    plt.plot(x_fit, linear(x_fit, *params_linear), color='red', label='Linear Fit')
-    plt.legend()
-    plt.xlabel('substrate [units]')
-    plt.ylabel('rate [units]')
-    plt.title('Linear fit')
-    plt.show()
-
-def plot_sqrt_fit(s1_data, s2_data, rate_data):
-    """
-    Plots the square root fit of the kinetics data
-    """
-    params_sqrt, _ = sp.curve_fit(sqrt_func, s1_data, rate_data)
-    x_fit = np.linspace(0, 1, 100)
-    plt.figure()
-    plt.scatter(s1_data, rate_data, label='S1')
-    plt.scatter(s2_data, rate_data, label='S2')
-    plt.plot(x_fit, sqrt_func(x_fit, *params_sqrt), color='red', label='Sqrt Fit')
-    plt.legend()
-    plt.xlabel('substrate [units]')
-    plt.ylabel('rate [units]')
-    plt.title('Sqrt fit')
-    plt.show()
 
 # Defining functions to fit models to data and evaluate goodness of fit
 def fit_model(model_type, rate, x_input):
