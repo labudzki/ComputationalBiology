@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import scipy.optimize as sp
 import numpy as np
+import inspect
 
 # Importing and preparing kinetics data
 def import_kinetics_data(file_path, s2_threshold=1.0):
@@ -32,11 +33,11 @@ def linear(x, a, b):
 def sqrt_func(x, a, b):
     return a * np.sqrt(x) + b
 
-def type_1a(S1, S2, K1, K2, v_max):
-    return (v_max * S1 * S2) / (K2 * K1 + K2 * S1 + S1 * S2)
+def type_1a(S1, S2, Kis1, Km1, v_max):
+    return (v_max * S1 * S2) / (Kis1 * Km1 + Km1 * S1 + S1 * S2)
 
-def type_1b(S1, S2, K1, K2, v_max):
-    return (v_max * S1 * S2) / (K1 * K2 + K2 * S1 + K1 * S2 + S1 * S2)
+def type_1b(S1, S2, Kis1, Km1, Km2, v_max):
+    return (v_max * S1 * S2) / (Kis1 * Km1 + Km1 * S1 + Km2 * S2 + S1 * S2)
 
 def type_2(S1, S2, K1, K2, v_max):
     return (v_max * S1 * S2) / (K2 * S1 + K1 * S2 + S1 * S2)
@@ -94,12 +95,20 @@ def plot_sqrt_fit(s1_data, s2_data, rate_data):
 def fit_model(model_type, S1, S2, rate, x_input):
     """
     Fits data to specified model types using the SciPy curve fit function.
+    Dynamically calculates number of parameters needed by model.
     """
-    params, _ = sp.curve_fit(
-        lambda xy, K1, K2, v_max: model_type(S1, S2, K1, K2, v_max),
-        x_input,
-        rate
-    )
+    num_params = len(inspect.signature(model_type).parameters) - 2 # Exclude S1 and S2
+    initial_guess = [1.0] * num_params # Tells model how many params to expect
+    try: 
+        params, _ = sp.curve_fit(
+            lambda xy, *params: model_type(xy[:, 0], xy[:, 1], *params),
+            x_input,
+            rate,
+            p0=initial_guess
+        )
+    except RuntimeError:
+        print(f"Model {model_type.__name__} failed to converge.")
+        return None
     return params
 
 def evaluate_fit(model_type, S1, S2, rate, params):
@@ -212,6 +221,7 @@ def compute_km2(K1_vals, vmax_vals, s2_targets, best_model, best_params):
         K1 = K1_vals[idx]
         K2 = best_params[1]
         v = best_model(S1, S2, K1, K2, vmax)
+
         # Derived from type 2 model: v = (vmax * s1 * s2) / (K1 * s2 + K2 * s1 + s1 * s2)
         K2 = (vmax * S1 * S2 - v * K1 * S2 - v * S1 * S2) / (v * S1)
         print(f"For S2 = {S2:.1f}: Km1 = {K1:0.4f}, Km2 = {K2:0.4f}, Vmax = {vmax:.4f}, v = {v:0.4f}")
@@ -221,6 +231,7 @@ if __name__ == "__main__":
     if kinetics_data is not None:
         models = {
             "Type 1a": type_1a,
+            # "Type 1b": type_1b, # Commented due to divergence
             "Type 2": type_2
         }
 
