@@ -8,7 +8,6 @@ Created on Thu Apr 17 15:31:20 2025
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from scipy.integrate import odeint
 import scipy.optimize as sp
 import os
@@ -18,6 +17,25 @@ def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
     """
     Viterbi algorithm for finding the most probable sequence of hidden states
     given a sequence of nucleotides.
+
+    Parameters:
+    obs: list
+        Observations (consists of list of nucleotides in give string, ex. ACAGT).
+    states: list
+        Hidden states (ex. Exon, Intron).
+    start_probs: dict
+        Initial probabilities of each state (Pi).
+    trans_probs: dict
+        Transition probabilities between states.
+    emit_probs: dict
+        Emission probabilities of observations given states.
+    
+    Returns:
+    final_prob: float
+        Probability of the most probable path.
+    best_path: list
+        The most probable path of hidden states given the final state,
+        based on the maximum final probability.
     """
     dp = [{}] # dp[t][state] = maximum probability of state at time t
     backtrack = {} # Path to the current state
@@ -49,10 +67,16 @@ def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
 
     return final_prob, best_path
 
-def gene_regulation_model_1(y, t, m_a, m_b, p_a, p_b, n_a, n_b, theta_a, theta_b, gamma_a, gamma_b, r_a, r_b, k_a, k_b, delta_a, delta_b): 
+def gene_regulation_model_1(y, t, m_a, m_b, n_a, n_b, theta_a, theta_b, gamma_a, gamma_b, k_a, k_b, delta_a, delta_b): 
     """
     Gene regulation model for mRNA and protein concentrations for route I. 
+
+    Parameters: description listed in the main() function. 
+
+    Returns: the derivatives of the concentrations of mRNA and proteins.
     """
+    r_a, r_b, p_a, p_b = y
+
     dr_a_dt = m_a * (p_b**n_b)/(p_b**n_b + theta_b**n_b) - gamma_a * r_a
     dr_b_dt = m_b * (theta_a**n_a)/(p_a**n_a + theta_a**n_a) - gamma_b * r_b
 
@@ -70,14 +94,13 @@ def solve_gene_regulation_model(gene_regulation_model, initial_conditions, t, pa
     Solves the specified gene regulation model using the odeint solver.
     """
     solution = odeint(gene_regulation_model, initial_conditions, t, args=(
-        params['m_a'], params['m_b'], params['p_a'], params['p_b'],
-        params['n_a'], params['n_b'], params['theta_a'], params['theta_b'],
-        params['gamma_a'], params['gamma_b'], params['r_a'], params['r_b'],
+        params['m_a'], params['m_b'], params['n_a'], params['n_b'], 
+        params['theta_a'], params['theta_b'], params['gamma_a'], params['gamma_b'], 
         params['k_a'], params['k_b'], params['delta_a'], params['delta_b']
     ))
     return solution
 
-def plot_mRNA_time_evolution(t, solution):
+def plot_mRNA_time_evolution(t, solution, save_path=None):
     """
     Plots the results of the gene regulation model.
     """
@@ -91,9 +114,33 @@ def plot_mRNA_time_evolution(t, solution):
     plt.title('Gene Regulation Model')
     plt.legend()
     plt.grid()
-    plt.show()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
 
-def vector_field(model_type, grid, var_indices, initial_conditions, params):
+def vector_field(model_type, grid, initial_conditions, params):
+    """
+    Computes the vector field for the phase plane plot.
+
+    Parameters: 
+    model_type: function
+        The gene regulation model function to be used.
+    grid: np.ndarray
+        The grid of values for the phase plane.
+    initial_conditions: list
+        Initial conditions for the model.
+    params: dict
+        Parameters for the gene regulation model.
+
+    Returns:
+    U: np.ndarray
+        The x values of the vector field for the phase plot.
+    V: np.ndarray
+        The y values of the vector field for the phase plot.
+    """
     U = np.zeros((len(grid), len(grid)))
     V = np.zeros((len(grid), len(grid)))
     
@@ -112,20 +159,41 @@ def vector_field(model_type, grid, var_indices, initial_conditions, params):
     return U, V
 
 
-def plot_phase_plane(model_type, var_indices, initial_conditions, grid, params, solution=None, save_path=None):
+def plot_phase_plane(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
+    """
+    Plots the phase plane for the gene regulation model.
+
+    Parameters:
+    model_type: function
+        The gene regulation model function to be used.
+    initial_conditions: list
+        Initial conditions for the model.
+    var_indices: list
+        Indices of the variables to be plotted on the x and y axes.
+    grid: np.ndarray
+        The grid of values for the phase plane.
+    params: dict
+        Parameters for the gene regulation model.
+    solution: np.ndarray
+        Solution array for plotting the trajectory, solved by odeint solver.
+    save_path: str
+        Path to save the plot. If None, the plot will be shown.
+    """
     X, Y = np.meshgrid(grid, grid)
-    U, V = vector_field(model_type, grid, var_indices, initial_conditions, params)
+    U, V = vector_field(model_type, grid, initial_conditions, params)
+    speed = np.sqrt(U**2 + V**2) # Magnitude of the vector field
 
     plt.figure(figsize=(8, 6))
-    plt.streamplot(X, Y, U, V, color='black', density=1.0)
-    plt.xlabel('p_A')
-    plt.ylabel('p_B')
-    plt.title('Phase Plane: p_A vs p_B')
+    strm = plt.streamplot(X, Y, U, V, color=speed, cmap='magma', density=1.0, linewidth=1)
+    plt.colorbar(strm.lines, label=r'Speed (|$dp/dt$|)')
+
+    plt.xlabel(r'Protein A ($p_a$)')
+    plt.ylabel(r'Protein B ($p_b$)')
+    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)')
     plt.grid(True)
 
-    # Overlay solution trajectory if provided
     if solution is not None:
-        plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='blue', lw=2, label='Trajectory')
+        plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
         plt.legend()
 
     if save_path:
@@ -136,7 +204,7 @@ def plot_phase_plane(model_type, var_indices, initial_conditions, grid, params, 
 
 def main():
     """
-    Main function to run the Viterbi algorithm with given parameters.
+    Main function to run the program for the Viterbi algorithm and gene regulation models. 
     """
     # Setting up libraries and arrays to represent the values in the tables given in the task
     states = ['Exon', 'Intron']
@@ -171,15 +239,12 @@ def main():
 
     initial_conditions = [0.8, 0.8, 0.8, 0.8]  # Initial concentrations for r_A, r_B, p_A, p_B
     t = np.linspace(0, 100, 100)  
-    # t = np.linspace(0, 10000, 1000)  
 
     params = {
         'm_a': 2.35, 'm_b': 2.35,  # Max transcription rates
-        'p_a': 0.8, 'p_b': 0.8,    # Initial protein concentrations
         'n_a': 3, 'n_b': 3,        # Hill coefficients
         'theta_a': 0.21, 'theta_b': 0.21,  # Binding thresholds
         'gamma_a': 1.0, 'gamma_b': 1.0,    # mRNA degradation rates
-        'r_a': 0.8, 'r_b': 0.8,    # Initial mRNA concentrations
         'k_a': 1.0, 'k_b': 1.0,    # Translation rates
         'delta_a': 1.0, 'delta_b': 1.0  # Protein degradation rates
     }
@@ -201,7 +266,7 @@ def main():
         gene_regulation_model_1,
         var_indices=var_indices,
         initial_conditions=initial_conditions,
-        grid=t,
+        grid=grid_vals,
         params=params,
         solution=solution
     )
