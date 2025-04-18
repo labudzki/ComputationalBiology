@@ -8,7 +8,10 @@ Created on Thu Apr 17 15:31:20 2025
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from scipy.integrate import odeint
+import scipy.optimize as sp
+import os
 
 
 def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
@@ -90,6 +93,47 @@ def plot_mRNA_time_evolution(t, solution):
     plt.grid()
     plt.show()
 
+def vector_field(model_type, grid, var_indices, initial_conditions, params):
+    U = np.zeros((len(grid), len(grid)))
+    V = np.zeros((len(grid), len(grid)))
+    
+    r_A, r_B = initial_conditions[0], initial_conditions[1]
+
+    for i, p_A in enumerate(grid):
+        for j, p_B in enumerate(grid):
+            y0 = [r_A, r_B, p_A, p_B]
+            dydt = model_type(y0, 0, **params)
+            U[j, i] = dydt[2]  # dp_A/dt
+            V[j, i] = dydt[3]  # dp_B/dt
+
+    
+    print("U max:", np.max(np.abs(U)))
+    print("V max:", np.max(np.abs(V)))
+    return U, V
+
+
+def plot_phase_plane(model_type, var_indices, initial_conditions, grid, params, solution=None, save_path=None):
+    X, Y = np.meshgrid(grid, grid)
+    U, V = vector_field(model_type, grid, var_indices, initial_conditions, params)
+
+    plt.figure(figsize=(8, 6))
+    plt.streamplot(X, Y, U, V, color='black', density=1.0)
+    plt.xlabel('p_A')
+    plt.ylabel('p_B')
+    plt.title('Phase Plane: p_A vs p_B')
+    plt.grid(True)
+
+    # Overlay solution trajectory if provided
+    if solution is not None:
+        plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='blue', lw=2, label='Trajectory')
+        plt.legend()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
 def main():
     """
     Main function to run the Viterbi algorithm with given parameters.
@@ -126,7 +170,8 @@ def main():
     print("Probability of the path:", probability)
 
     initial_conditions = [0.8, 0.8, 0.8, 0.8]  # Initial concentrations for r_A, r_B, p_A, p_B
-    t = np.linspace(0, 10000, 1000)  
+    t = np.linspace(0, 100, 100)  
+    # t = np.linspace(0, 10000, 1000)  
 
     params = {
         'm_a': 2.35, 'm_b': 2.35,  # Max transcription rates
@@ -147,7 +192,19 @@ def main():
     )
 
     plot_mRNA_time_evolution(t, solution)
+    
+    # Plot phase plane for model 1
+    var_indices = [2, 3]  # p_A vs p_B
+    grid_vals = np.linspace(0, 3, 20)
 
+    plot_phase_plane(
+        gene_regulation_model_1,
+        var_indices=var_indices,
+        initial_conditions=initial_conditions,
+        grid=t,
+        params=params,
+        solution=solution
+    )
 
 
 if __name__ == "__main__":
