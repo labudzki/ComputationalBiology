@@ -84,16 +84,32 @@ def gene_regulation_model_1(y, t, m_a, m_b, n_a, n_b, theta_a, theta_b, gamma_a,
     dp_b_dt = k_b * r_b - delta_b * p_b
     return dr_a_dt, dr_b_dt, dp_a_dt, dp_b_dt
 
-def gene_regulation_model_2(y, t, m_a, m_b, p_a, p_b, n_a, n_b, theta_a, theta_b, gamma_a, gamma_b, r_a, r_b, k_a, k_b, delta_a, delta_b):
+def gene_regulation_model_2(y, t, dt, m_a, m_b, n_a, n_b, theta_a, theta_b, gamma_a, gamma_b, k_a, k_b, delta_a, delta_b, sigma_1a, sigma_2a, sigma_1b, sigma_2b, noise=True, dt=1e-2):
     """
-    placeholder for the second gene regulation model (route II)
+    Stochastic gene regulation model using SDEVelo formalism (Route II).
+    y = [u_a, u_b, s_a, s_b, p_a, p_b] (unspliced, spliced mRNAs, proteins)
     """
+
+    u_a, u_b, s_a, s_b, p_a, p_b = y
+    du_a_dt = m_a * (p_b**n_b)/(p_b**n_b + theta_b**n_b) - gamma_a * u_a
+    du_b_dt = m_b * (theta_a**n_a)/(p_a**n_a + theta_a**n_a) - gamma_b * u_b
+    ds_a_dt = gamma_a * u_a - k_a * s_a
+    ds_b_dt = gamma_b * u_b - k_b * s_b
+    dp_a_dt = k_a * s_a - delta_a * p_a
+    dp_b_dt = k_b * s_b - delta_b * p_b
+    if noise:
+        du_a_dt += sigma_1a * np.random.normal(0, np.sqrt(dt))
+        du_b_dt += sigma_1b * np.random.normal(0, np.sqrt(dt))
+        ds_a_dt += sigma_2a * np.random.normal(0, np.sqrt(dt))
+        ds_b_dt += sigma_2b * np.random.normal(0, np.sqrt(dt))
+
+    return du_a_dt, du_b_dt, ds_a_dt, ds_b_dt, dp_a_dt, dp_b_dt
 
 def solve_gene_regulation_model(gene_regulation_model, initial_conditions, t, params):
     """
     Solves the specified gene regulation model using the odeint solver.
     """
-    solution = odeint(gene_regulation_model, initial_conditions, t, args=(
+    solution = odeint(gene_regulation_odel, initial_conditions, t, args=(
         params['m_a'], params['m_b'], params['n_a'], params['n_b'], 
         params['theta_a'], params['theta_b'], params['gamma_a'], params['gamma_b'], 
         params['k_a'], params['k_b'], params['delta_a'], params['delta_b']
@@ -240,7 +256,7 @@ def main():
     initial_conditions = [0.8, 0.8, 0.8, 0.8]  # Initial concentrations for r_A, r_B, p_A, p_B
     t = np.linspace(0, 100, 100)  
 
-    params = {
+    det_params = {
         'm_a': 2.35, 'm_b': 2.35,  # Max transcription rates
         'n_a': 3, 'n_b': 3,        # Hill coefficients
         'theta_a': 0.21, 'theta_b': 0.21,  # Binding thresholds
@@ -249,14 +265,28 @@ def main():
         'delta_a': 1.0, 'delta_b': 1.0  # Protein degradation rates
     }
 
-    solution = solve_gene_regulation_model(
+    stoch_params = {
+        'a_A': 1.0, 'a_B': 0.25,
+        'b_A': 0.0005, 'b_B': 0.0005,
+        'c_A': 2.0, 'c_B': 0.5,
+        'beta_A': 2.35, 'beta_B': 2.35,
+        'gamma_A': 1.0, 'gamma_B': 1.0,
+        'n_A': 3, 'n_B': 3,
+        'theta_A': 0.21, 'theta_B': 0.21,
+        'k_PA': 1.0, 'k_PB': 1.0,
+        'delta_PA': 1.0, 'delta_PB': 1.0,
+        'sigma_1A': 0.05, 'sigma_2A': 0.05,
+        'sigma_1B': 0.05, 'sigma_2B': 0.05,
+    }
+
+    GRN1_solution = solve_gene_regulation_model(
         gene_regulation_model_1,
         initial_conditions,
         t,
-        params
+        det_params
     )
 
-    plot_mRNA_time_evolution(t, solution)
+    plot_mRNA_time_evolution(t, GRN1_solution)
     
     # Plot phase plane for model 1
     var_indices = [2, 3]  # p_A vs p_B
@@ -267,9 +297,12 @@ def main():
         var_indices=var_indices,
         initial_conditions=initial_conditions,
         grid=grid_vals,
-        params=params,
-        solution=solution
+        params=det_params,
+        solution=GRN1_solution
     )
+
+
+
 
 
 if __name__ == "__main__":
