@@ -10,6 +10,7 @@ Created on Apr 17, 2025
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+import os
 
 
 def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
@@ -300,6 +301,9 @@ def main():
     """
     Main function to run the gene regulation models and Viterbi algorithm.
     """
+    results_dir = 'results'
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
     # Viterbi setup
     states = ['Exon', 'Intron']
     observations = ['A', 'G', 'C', 'G', 'C']
@@ -312,7 +316,7 @@ def main():
     print("Probability of the path:", prob)
 
     # Deterministic model
-    t = np.linspace(0, 100, 500)
+    t = np.linspace(0, 100, 1000)
     initial_det = [0.8, 0.8, 0.8, 0.8]
     det_params = {
         'm_a': 2.35, 'm_b': 2.35,
@@ -324,7 +328,7 @@ def main():
     }
 
     sol_det = solve_gene_regulation_det(gene_regulation_det, initial_det, t, det_params)
-    plot_mRNA_time_evolution_det(t, sol_det)
+    plot_mRNA_time_evolution_det(t, sol_det, save_path=os.path.join(results_dir, "det_mRNA_evolution.png"))
 
     grid = np.linspace(0, 4, 30)
     plot_phase_plane_det(
@@ -333,7 +337,8 @@ def main():
         var_indices=[2, 3],  # indices for p_a and p_b
         grid=grid,
         params=det_params,
-        solution=sol_det
+        solution=sol_det, 
+        save_path=os.path.join(results_dir, "det_phase_plane.png")
     )
 
     # Stochastic model
@@ -369,14 +374,15 @@ def main():
         for _ in range(simulations)
     ]
 
-    plot_mRNA_time_evolution_sde(t, sde_results)
+    plot_mRNA_time_evolution_sde(t, sde_results, save_path=os.path.join(results_dir, "sde_mRNA_evolution.png"))
     plot_phase_plane_sde(
         model_type=gene_regulation_sde,
         initial_conditions=initial_sde,  # [u_a, u_b, s_a, s_b, p_a, p_b]
         var_indices=[4, 5],  # indices for p_a and p_b
         grid=grid,
         params=stoch_params,
-        solution=sde_results[0]  # Mean trajectory across simulations
+        solution=np.mean(sde_results, axis=0),  # Mean trajectory
+        save_path=os.path.join(results_dir, "sde_phase_plane.png")
     )
 
 
