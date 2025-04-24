@@ -10,6 +10,7 @@ Created on Apr 17, 2025
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+import os
 
 
 def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
@@ -75,13 +76,13 @@ def plot_mRNA_time_evolution_det(t, solution, save_path=None):
     plt.figure(figsize=(10, 6))
     plt.plot(t, r_a, label='mRNA A', color='blue')
     plt.plot(t, r_b, label='mRNA B', color='red')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Concentration')
-    plt.title('Deterministic Gene Regulation')
-    plt.legend()
+    plt.xlabel('Time (s)', fontsize=16)
+    plt.ylabel('Concentration', fontsize=16)
+    plt.title('Deterministic Gene Regulation', fontsize=20)
+    plt.legend(fontsize=14)
     plt.grid()
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=300)
         plt.close()
     else:
         plt.show()
@@ -123,14 +124,14 @@ def plot_phase_plane_det(model_type, initial_conditions, var_indices, grid, para
     strm = plt.streamplot(X, Y, U, V, color=speed, cmap='magma', density=1.0, linewidth=1)
     plt.colorbar(strm.lines, label=r'Speed (|$dp/dt$|)')
 
-    plt.xlabel(r'Protein A ($p_a$)')
-    plt.ylabel(r'Protein B ($p_b$)')
-    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)')
+    plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
+    plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
+    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)', fontsize=20)
     plt.grid(True)
 
     if solution is not None:
         plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
-        plt.legend()
+        plt.legend(fontsize=14)
 
     if save_path:
         plt.savefig(save_path, dpi=300)
@@ -222,10 +223,10 @@ def plot_mRNA_time_evolution_sde(t, solutions, save_path=None):
     axs[0].fill_between(t, mean_u_a - std_u_a, mean_u_a + std_u_a, color='blue', alpha=0.3, label='u_A ± std')
     axs[0].plot(t, mean_u_b, label='Mean u_B', color='red')
     axs[0].fill_between(t, mean_u_b - std_u_b, mean_u_b + std_u_b, color='red', alpha=0.3, label='u_B ± std')
-    axs[0].set_xlabel('Time (s)')
-    axs[0].set_ylabel('Concentration')
-    axs[0].set_title('Stochastic Gene Regulation: Transcription (u_A and u_B)')
-    axs[0].legend()
+    axs[0].set_xlabel('Time (s)', fontsize=16)
+    axs[0].set_ylabel('Concentration', fontsize=16)
+    axs[0].set_title('Stochastic Gene Regulation: Transcription (u_A and u_B)', fontsize=20)
+    axs[0].legend(fontsize=14)
     axs[0].grid()
 
     # Subplot 2: s_a and s_b
@@ -233,15 +234,15 @@ def plot_mRNA_time_evolution_sde(t, solutions, save_path=None):
     axs[1].fill_between(t, mean_s_a - std_s_a, mean_s_a + std_s_a, color='green', alpha=0.3, label='s_A ± std')
     axs[1].plot(t, mean_s_b, label='Mean s_B', color='orange')
     axs[1].fill_between(t, mean_s_b - std_s_b, mean_s_b + std_s_b, color='orange', alpha=0.3, label='s_B ± std')
-    axs[1].set_xlabel('Time (s)')
-    axs[1].set_ylabel('Concentration')
-    axs[1].set_title('Stochastic Gene Regulation: Splicing (s_A and s_B)')
-    axs[1].legend()
+    axs[1].set_xlabel('Time (s)', fontsize=16)
+    axs[1].set_ylabel('Concentration', fontsize=16)
+    axs[1].set_title('Stochastic Gene Regulation: Splicing (s_A and s_B)', fontsize=20)
+    axs[1].legend(fontsize=14)
     axs[1].grid()
 
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=300)
         plt.close()
     else:
         plt.show()
@@ -280,14 +281,14 @@ def plot_phase_plane_sde(model_type, initial_conditions, var_indices, grid, para
     strm = plt.streamplot(X, Y, U, V, color=speed, cmap='magma', density=1.0, linewidth=1)
     plt.colorbar(strm.lines, label=r'Speed (|$dp/dt$|)')
 
-    plt.xlabel(r'Protein A ($p_a$)')
-    plt.ylabel(r'Protein B ($p_b$)')
-    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)')
+    plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
+    plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
+    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)', fontsize=20)
     plt.grid(True)
 
     if solution is not None:
         plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
-        plt.legend()
+        plt.legend(fontsize=14)
 
     if save_path:
         plt.savefig(save_path, dpi=300)
@@ -324,16 +325,19 @@ def main():
     }
 
     sol_det = solve_gene_regulation_det(gene_regulation_det, initial_det, t, det_params)
-    plot_mRNA_time_evolution_det(t, sol_det)
+    save_path_det = os.path.join(os.path.expanduser("~"), "Desktop", "route1_mRNA_dynamics.png")
+    plot_mRNA_time_evolution_det(t, sol_det, save_path=save_path_det)
 
     grid = np.linspace(0, 4, 30)
+    save_path_pp = os.path.join(os.path.expanduser("~"), "Desktop", "route1_phase_plane.png")
     plot_phase_plane_det(
         model_type=gene_regulation_det,
         initial_conditions=initial_det,
         var_indices=[2, 3],  # indices for p_a and p_b
         grid=grid,
         params=det_params,
-        solution=sol_det
+        solution=sol_det,
+        save_path=save_path_pp
     )
 
     # Stochastic model
@@ -368,15 +372,17 @@ def main():
         solve_gene_regulation_sde(gene_regulation_sde, initial_sde, t, stoch_params)
         for _ in range(simulations)
     ]
-
-    plot_mRNA_time_evolution_sde(t, sde_results)
+    save_path_sde = os.path.join(os.path.expanduser("~"), "Desktop", "sde_mRNA_evolution.png")
+    save_path_pp_sde = os.path.join(os.path.expanduser("~"), "Desktop", "sde_phase_plane_sde.png")
+    plot_mRNA_time_evolution_sde(t, sde_results, save_path=save_path_sde)
     plot_phase_plane_sde(
         model_type=gene_regulation_sde,
         initial_conditions=initial_sde,  # [u_a, u_b, s_a, s_b, p_a, p_b]
         var_indices=[4, 5],  # indices for p_a and p_b
         grid=grid,
         params=stoch_params,
-        solution=sde_results[0]  # Mean trajectory across simulations
+        solution=sde_results[0],  # Mean trajectory across simulations
+        save_path=save_path_pp_sde
     )
 
 
