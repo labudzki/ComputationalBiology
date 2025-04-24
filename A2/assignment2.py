@@ -94,21 +94,6 @@ def vector_field_det(model_type, grid, initial_conditions, params):
     This function computes the derivatives of the protein concentrations
     at each point in the grid to plot the phase plot.
     """
-<<<<<<< HEAD:A2/assignment2.py
-    u_field = np.zeros((len(grid), len(grid)))
-    v_field = np.zeros((len(grid), len(grid)))
-
-    for i, protein_a in enumerate(grid):
-        for j, protein_b in enumerate(grid):
-            time_array = np.array([0])  # Single time point for steady-state calculation
-            solution = solve_gene_regulation_det(model_type, initial_conditions, time_array, params)
-            rna_a = solution[0, 0]
-            rna_b = solution[0, 1]
-            y0 = [rna_a, rna_b, protein_a, protein_b]
-            dydt = model_type(y0, 0, **params)
-            u_field[j, i] = dydt[2]  # dp_a/dt
-            v_field[j, i] = dydt[3]  # dp_b/dt
-=======
     U = np.zeros((len(grid), len(grid)))
     V = np.zeros((len(grid), len(grid)))
     
@@ -123,11 +108,10 @@ def vector_field_det(model_type, grid, initial_conditions, params):
             dydt = model_type(y0, 0, **params)
             U[j, i] = dydt[2]  # dp_A/dt
             V[j, i] = dydt[3]  # dp_B/dt
->>>>>>> 817c5231e8a052d5868397ace28bbe15c082b4af:A2/viterbi.py
 
-    print("u_field max:", np.max(np.abs(u_field)))
-    print("v_field max:", np.max(np.abs(v_field)))
-    return u_field, v_field
+    print("u_field max:", np.max(np.abs(U)))
+    print("v_field max:", np.max(np.abs(V)))
+    return U, V
 
 
 def plot_phase_plane_det(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
