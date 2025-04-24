@@ -130,9 +130,6 @@ def gene_regulation_sde(y, t, dt,
     
     u_a, u_b, s_a, s_b, p_a, p_b = y
 
-    # Noise terms 
-    noise_terms = lambda sigma: sigma * np.random.normal(0, np.sqrt(dt)) if noise else 0
-
     # Time-dependent transcription rates 
     if time_dependent_alpha:
         alpha_a = c_a / (1 + np.exp(b_a * t - a_a))
