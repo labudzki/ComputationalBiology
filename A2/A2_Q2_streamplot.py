@@ -73,7 +73,7 @@ def vector_field(model_type, grid, initial_conditions, params):
     return U, V
 
 
-def plot_phase_plane(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
+def plot_phase_plane(model_type, initial_conditions, var_indices, grid, params, solution=None, nullclines=False, equilibria=False, save_path=None):
     """
     Plots the phase plane for the gene regulation model.
 
@@ -110,6 +110,21 @@ def plot_phase_plane(model_type, initial_conditions, var_indices, grid, params, 
         plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
         plt.legend()
 
+    if nullclines:
+        # x-nullcline
+        plt.axvline(x=0, color='red', lw=2, linestyle=":", label='x-nullcline(s)')
+        plt.axhline(y=params["alpha"]/params["beta"], color='red', lw=2, linestyle=":")
+
+        # y-nullcline
+        plt.axvline(x=params["gamma"]/params["delta"], color='blue', lw=2, linestyle=":", label='y-nullcline')
+        plt.axhline(y=0, color='blue', lw=2, linestyle=":")        
+        plt.legend()
+
+    if equilibria:
+        pnts = [(0,0), (params["gamma"]/params["delta"], params["alpha"]/params["beta"])]
+        plt.scatter(*zip(*pnts), color='black', label="Equilibrium points")
+        plt.legend(loc='upper right')
+
     if save_path:
         plt.savefig(save_path, dpi=300)
         plt.close()
@@ -143,5 +158,7 @@ plot_phase_plane(
     initial_conditions=initial_conditions,
     grid=grid_vals,
     params=params,
+    nullclines=True,
+    equilibria=True,
     solution=solution
 )
