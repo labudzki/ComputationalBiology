@@ -147,8 +147,8 @@ def gene_regulation_sde(y, t, dt,
     promotion_splicing_a = (p_b**n_b) / (theta_b**n_b + p_b**n_b)  # Promotion of splicing of mRNA A by protein B
     
     # Transcription 
-    du_a_dt = (alpha_a - beta_a * u_a) + noise_terms(sigma_1a)  # Transcription rate of pre-mRNA A
-    du_b_dt = (alpha_b - beta_b * u_b) + noise_terms(sigma_1b)  # Transcription rate of pre-mRNA B
+    du_a_dt = (alpha_a - beta_a * u_a * promotion_splicing_a) + noise_terms(sigma_1a)  # Transcription rate of pre-mRNA A
+    du_b_dt = (alpha_b - beta_b * u_b * inhibition_splicing_b) + noise_terms(sigma_1b)  # Transcription rate of pre-mRNA B
     
     # Splicing 
     ds_a_dt = (beta_a * u_a * promotion_splicing_a - gamma_a * s_a) + noise_terms(sigma_2a)  # Splicing of mRNA A
@@ -177,9 +177,41 @@ def solve_gene_regulation_sde(model_type, y0, t, params):
 
     return sol
 
+def plot_pre_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_params, save_path=None):
+    """
+    Plot the time evolution of pre-mRNA concentrations (u_A and u_B) for Route II.
+    Individual simulations are plotted as semi-transparent lines.
+    """
+
+    solutions = []
+    for _ in range(num_simulations):
+        sol = solve_gene_regulation_sde(gene_regulation_sde, initial_conditions, t, sde_params)
+        solutions.append(sol)
+
+    solutions = np.array(solutions)
+
+    u_a_vals, u_b_vals = solutions[:, :, 0], solutions[:, :, 1]
+
+    plt.figure(figsize=(10, 6))
+    for i in range(num_simulations):
+        plt.plot(t, u_a_vals[i], color='blue', alpha=0.5, lw=0.8)
+        plt.plot(t, u_b_vals[i], color='red', alpha=0.5, lw=0.8)
+    plt.xlabel('Time (s)', fontsize=16)
+    plt.ylabel('Concentration', fontsize=16)
+    plt.title(r'mRNA Time Evolution($u_A$ and $u_B$)', fontsize=20)
+    plt.legend([r'$u_A$', r'$u_B$'], fontsize=14)
+    plt.grid()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+
 def plot_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_params, save_path=None):
     """
-    Plot the time evolution of mRNA concentrations for A and B (Route II).
+    Plot the time evolution of mRNA concentrations (s_A and s_B) for Route II.
     Individual simulations are plotted as semi-transparent lines.
     """
     # Run simulations and collect results
@@ -190,33 +222,19 @@ def plot_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_par
 
     solutions = np.array(solutions)
 
-    # Extract individual trajectories
-    u_a_vals, u_b_vals = solutions[:, :, 0], solutions[:, :, 1]
+    # Extract mRNA trajectories
     s_a_vals, s_b_vals = solutions[:, :, 2], solutions[:, :, 3]
 
-    fig, axs = plt.subplots(2, 1, figsize=(10, 12))
-
-    # Plot transcription trajectories (u_A and u_B)
+    plt.figure(figsize=(10, 6))
     for i in range(num_simulations):
-        axs[0].plot(t, u_a_vals[i], color='blue', alpha=0.5, lw=0.8)
-        axs[0].plot(t, u_b_vals[i], color='red', alpha=0.5, lw=0.8)
-    axs[0].set_xlabel('Time (s)', fontsize=16)
-    axs[0].set_ylabel('Concentration', fontsize=16)
-    axs[0].set_title('Stochastic Gene Regulation: Transcription (u_A and u_B)', fontsize=20)
-    axs[0].legend(['u_A', 'u_B'], fontsize=14)
-    axs[0].grid()
+        plt.plot(t, s_a_vals[i], color='green', alpha=0.5, lw=0.8)
+        plt.plot(t, s_b_vals[i], color='orange', alpha=0.5, lw=0.8)
+    plt.xlabel('Time (s)', fontsize=16)
+    plt.ylabel('Concentration', fontsize=16)
+    plt.title(r'mRNA Time Evolution($s_A$ and $s_B$)', fontsize=20)
+    plt.legend([r'$s_A$', r'$s_B$'], fontsize=14)
+    plt.grid()
 
-    # Plot splicing trajectories (s_A and s_B)
-    for i in range(num_simulations):
-        axs[1].plot(t, s_a_vals[i], color='green', alpha=0.5, lw=0.8)
-        axs[1].plot(t, s_b_vals[i], color='orange', alpha=0.5, lw=0.8)
-    axs[1].set_xlabel('Time (s)', fontsize=16)
-    axs[1].set_ylabel('Concentration', fontsize=16)
-    axs[1].set_title('Stochastic Gene Regulation: Splicing (s_A and s_B)', fontsize=20)
-    axs[1].legend(['s_A', 's_B'], fontsize=14)
-    axs[1].grid()
-
-    plt.tight_layout()
     if save_path:
         plt.savefig(save_path, dpi=300)
         plt.close()
@@ -244,7 +262,7 @@ def plot_phase_plane_sde(sde_solutions, num_simulations, t, save_path):
 
     plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
     plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
-    plt.title('Stochastic Gene Regulation: Phase Trajectory (p_a vs p_b)', fontsize=20)
+    plt.title(r'Phase Trajectory ($p_a$ vs $p_b$)', fontsize=20)
     plt.grid(True)
     plt.legend(fontsize=14)
 
@@ -261,19 +279,26 @@ def main():
     results_dir = 'results'
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
+
     # Viterbi setup
     states = ['Exon', 'Intron']
     observations = ['A', 'G', 'C', 'G', 'C']
     start_probs = {'Exon': 0.5, 'Intron': 0.5}
-    trans_probs = {'Exon': {'Exon': 0.9, 'Intron': 0.1}, 'Intron': {'Exon': 0.2, 'Intron': 0.8}}
-    emit_probs = {'Exon': {'A': 0.25, 'U': 0.25, 'G': 0.25, 'C': 0.25}, 'Intron': {'A': 0.4, 'U': 0.4, 'G': 0.05, 'C': 0.15}}
+    trans_probs = {
+        'Exon': {'Exon': 0.9, 'Intron': 0.1}, 
+        'Intron': {'Exon': 0.2, 'Intron': 0.8}
+        }
+    emit_probs = {
+        'Exon': {'A': 0.25, 'U': 0.25, 'G': 0.25, 'C': 0.25}, 
+        'Intron': {'A': 0.4, 'U': 0.4, 'G': 0.05, 'C': 0.15}
+        }
 
     prob, path = viterbi_algorithm(observations, states, start_probs, trans_probs, emit_probs)
     print("Most probable path:", path)
     print("Probability of the path:", prob)
 
     # Deterministic model
-    t = np.linspace(0, 100, 500)
+    t = np.linspace(0, 100, 1000)
     initial_det = [0.8, 0.8, 0.8, 0.8]
     det_params = {
         'm_a': 2.35, 'm_b': 2.35,
@@ -285,7 +310,12 @@ def main():
     }
 
     sol_det = solve_gene_regulation_det(gene_regulation_det, initial_det, t, det_params)
-    plot_mRNA_time_evolution_det(t, sol_det, save_path=os.path.join(results_dir, "route1_mRNA_dynamics.png"))
+
+    plot_mRNA_time_evolution_det(
+        t, 
+        sol_det, 
+        save_path=os.path.join(results_dir, "route1_mRNA_dynamics.png")
+        )
 
     plot_phase_plane_det(
         model_type=gene_regulation_det,
@@ -296,6 +326,7 @@ def main():
     )
 
     # Stochastic model setup
+    t = np.linspace(0, 100, 1000)
     initial_sde = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
     sde_params = {
         'a_a': 1, 'a_b': 0.25,
@@ -320,6 +351,14 @@ def main():
     for _ in range(num_simulations):
         sol = solve_gene_regulation_sde(gene_regulation_sde, initial_sde, t, sde_params)
         sde_solutions.append(sol)
+
+    plot_pre_mRNA_time_evolution_sde(
+        t,
+        num_simulations,
+        initial_sde,
+        sde_params,
+        save_path=os.path.join(results_dir, "route2_pre_mRNA_dynamics.png")
+    )
 
     plot_mRNA_time_evolution_sde(
         t,
