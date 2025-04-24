@@ -90,25 +90,27 @@ def plot_mRNA_time_evolution_det(t, solution, save_path=None):
 
 def vector_field_det(model_type, grid, initial_conditions, params):
     """
-    Calculate the vector field for the deterministic model (Route I). 
+    Calculate the vector field for the deterministic model (Route I).
     This function computes the derivatives of the protein concentrations
-    at each point in the grid to plot the phase plot. 
+    at each point in the grid to plot the phase plot.
     """
-    U = np.zeros((len(grid), len(grid)))
-    V = np.zeros((len(grid), len(grid)))
-    
-    r_A, r_B = initial_conditions[0], initial_conditions[1]
+    u_field = np.zeros((len(grid), len(grid)))
+    v_field = np.zeros((len(grid), len(grid)))
 
-    for i, p_A in enumerate(grid):
-        for j, p_B in enumerate(grid):
-            y0 = [r_A, r_B, p_A, p_B]
+    for i, protein_a in enumerate(grid):
+        for j, protein_b in enumerate(grid):
+            time_array = np.array([0])  # Single time point for steady-state calculation
+            solution = solve_gene_regulation_det(model_type, initial_conditions, time_array, params)
+            rna_a = solution[0, 0]
+            rna_b = solution[0, 1]
+            y0 = [rna_a, rna_b, protein_a, protein_b]
             dydt = model_type(y0, 0, **params)
-            U[i, j] = dydt[2]  # dp_A/dt
-            V[i, j] = dydt[3]  # dp_B/dt
+            u_field[j, i] = dydt[2]  # dp_a/dt
+            v_field[j, i] = dydt[3]  # dp_b/dt
 
-    print("U max:", np.max(np.abs(U)))
-    print("V max:", np.max(np.abs(V)))
-    return U, V
+    print("u_field max:", np.max(np.abs(u_field)))
+    print("v_field max:", np.max(np.abs(v_field)))
+    return u_field, v_field
 
 
 def plot_phase_plane_det(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
