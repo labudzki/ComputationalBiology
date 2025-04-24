@@ -13,6 +13,7 @@ from scipy.integrate import odeint
 import os
 
 
+# Verterbi algorithm for hidden Markov model
 def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
     """
     Viterbi algorithm for finding the most probable sequence of hidden states 
@@ -43,6 +44,7 @@ def viterbi_algorithm(obs, states, start_probs, trans_probs, emit_probs):
     return final_prob, backtrack[final_state]
 
 
+# Determistic model of gene regulation (Route I)
 def gene_regulation_det(y, t, m_a, m_b, n_a, n_b, theta_a, theta_b, gamma_a, gamma_b, k_a, k_b, delta_a, delta_b):
     """
     Deterministic ODE model of gene regulation with Protein A inhibiting transcription of Gene B, 
@@ -88,53 +90,20 @@ def plot_mRNA_time_evolution_det(t, solution, save_path=None):
         plt.show()
 
 
-def vector_field_det(model_type, grid, initial_conditions, params):
+def plot_phase_plane_det(model_type, initial_conditions, t, params, save_path=None):
     """
-    Calculate the vector field for the deterministic model (Route I).
-    This function computes the derivatives of the protein concentrations
-    at each point in the grid to plot the phase plot.
+    Solve the full ODE system and plot the phase trajectory (p_a vs p_b).
     """
-    U = np.zeros((len(grid), len(grid)))
-    V = np.zeros((len(grid), len(grid)))
+    solution = solve_gene_regulation_det(model_type, initial_conditions, t, params)
+    p_a = solution[:, 2]
+    p_b = solution[:, 3]
     
-    # r_A, r_B = initial_conditions[0], initial_conditions[1]
-
-    for i, p_A in enumerate(grid):
-        for j, p_B in enumerate(grid):
-            solution = solve_gene_regulation_det(model_type, [initial_conditions[0], initial_conditions[1], p_A, p_B], grid, params)
-            r_A = solution[0]
-            r_B = solution[1]
-            y0 = [r_A, r_B, p_A, p_B]
-            dydt = model_type(y0, 0, **params)
-            U[j, i] = dydt[2]  # dp_A/dt
-            V[j, i] = dydt[3]  # dp_B/dt
-
-    print("u_field max:", np.max(np.abs(U)))
-    print("v_field max:", np.max(np.abs(V)))
-    return U, V
-
-
-def plot_phase_plane_det(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
-    """
-    Plot the phase plane for the deterministic model (Route I) 
-    showing the vector field and the trajectory of the system.
-    """
-    X, Y = np.meshgrid(grid, grid)
-    U, V = vector_field_det(model_type, grid, initial_conditions, params)
-    speed = np.sqrt(U**2 + V**2) # Magnitude of the vector field
-
     plt.figure(figsize=(8, 6))
-    strm = plt.streamplot(X, Y, U, V, color=speed, cmap='magma', density=1.0, linewidth=1)
-    plt.colorbar(strm.lines, label=r'Speed (|$dp/dt$|)')
-
+    plt.plot(p_a, p_b, lw=2, color='darkblue')
     plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
     plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
-    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)', fontsize=20)
+    plt.title('Protein Phase Trajectory (p_a vs p_b)', fontsize=20)
     plt.grid(True)
-
-    if solution is not None:
-        plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
-        plt.legend(fontsize=14)
 
     if save_path:
         plt.savefig(save_path, dpi=300)
@@ -143,6 +112,7 @@ def plot_phase_plane_det(model_type, initial_conditions, var_indices, grid, para
         plt.show()
 
 
+# Stochastic model of gene regulation (Route II)
 def gene_regulation_sde(y, t, dt,
                         a_a, a_b, b_a, b_b,
                         c_a, c_b, beta_a, beta_b,
@@ -173,8 +143,8 @@ def gene_regulation_sde(y, t, dt,
         alpha_b = m_b
     
     # Inhibition and promotion terms for splicing
-    inhibition_splicing_b = 1 / (1 + (p_a / theta_a)**n_a)  # Inhibition of splicing of mRNA B by protein A
-    promotion_splicing_a = (p_b / theta_b)**n_b / (1 + (p_b / theta_b)**n_b)  # Promotion of splicing of mRNA A by protein B
+    inhibition_splicing_b = (theta_a**n_a) / (theta_a**n_a + p_a**n_a) # Inhibition of splicing of mRNA B by protein A
+    promotion_splicing_a = (p_b**n_b) / (theta_b**n_b + p_b**n_b)  # Promotion of splicing of mRNA A by protein B
     
     # Transcription 
     du_a_dt = (alpha_a - beta_a * u_a) + noise_terms(sigma_1a)  # Transcription rate of pre-mRNA A
@@ -207,40 +177,43 @@ def solve_gene_regulation_sde(model_type, y0, t, params):
 
     return sol
 
-def plot_mRNA_time_evolution_sde(t, solutions, save_path=None):
+def plot_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_params, save_path=None):
     """
     Plot the time evolution of mRNA concentrations for A and B (Route II).
-    Error is shaded around the mean trajectory.
+    Individual simulations are plotted as semi-transparent lines.
     """
-    # Calculate mean and standard deviation across simulations
+    # Run simulations and collect results
+    solutions = []
+    for _ in range(num_simulations):
+        sol = solve_gene_regulation_sde(gene_regulation_sde, initial_conditions, t, sde_params)
+        solutions.append(sol)
+
     solutions = np.array(solutions)
-    mean_u_a, mean_u_b = np.mean(solutions[:, :, 0], axis=0), np.mean(solutions[:, :, 1], axis=0)
-    mean_s_a, mean_s_b = np.mean(solutions[:, :, 2], axis=0), np.mean(solutions[:, :, 3], axis=0)
-    std_u_a, std_u_b = np.std(solutions[:, :, 0], axis=0), np.std(solutions[:, :, 1], axis=0)
-    std_s_a, std_s_b = np.std(solutions[:, :, 2], axis=0), np.std(solutions[:, :, 3], axis=0)
+
+    # Extract individual trajectories
+    u_a_vals, u_b_vals = solutions[:, :, 0], solutions[:, :, 1]
+    s_a_vals, s_b_vals = solutions[:, :, 2], solutions[:, :, 3]
 
     fig, axs = plt.subplots(2, 1, figsize=(10, 12))
 
-    # Subplot 1: u_a and u_b
-    axs[0].plot(t, mean_u_a, label='Mean u_A', color='blue')
-    axs[0].fill_between(t, mean_u_a - std_u_a, mean_u_a + std_u_a, color='blue', alpha=0.3, label='u_A ± std')
-    axs[0].plot(t, mean_u_b, label='Mean u_B', color='red')
-    axs[0].fill_between(t, mean_u_b - std_u_b, mean_u_b + std_u_b, color='red', alpha=0.3, label='u_B ± std')
+    # Plot transcription trajectories (u_A and u_B)
+    for i in range(num_simulations):
+        axs[0].plot(t, u_a_vals[i], color='blue', alpha=0.5, lw=0.8)
+        axs[0].plot(t, u_b_vals[i], color='red', alpha=0.5, lw=0.8)
     axs[0].set_xlabel('Time (s)', fontsize=16)
     axs[0].set_ylabel('Concentration', fontsize=16)
     axs[0].set_title('Stochastic Gene Regulation: Transcription (u_A and u_B)', fontsize=20)
-    axs[0].legend(fontsize=14)
+    axs[0].legend(['u_A', 'u_B'], fontsize=14)
     axs[0].grid()
 
-    # Subplot 2: s_a and s_b
-    axs[1].plot(t, mean_s_a, label='Mean s_A', color='green')
-    axs[1].fill_between(t, mean_s_a - std_s_a, mean_s_a + std_s_a, color='green', alpha=0.3, label='s_A ± std')
-    axs[1].plot(t, mean_s_b, label='Mean s_B', color='orange')
-    axs[1].fill_between(t, mean_s_b - std_s_b, mean_s_b + std_s_b, color='orange', alpha=0.3, label='s_B ± std')
+    # Plot splicing trajectories (s_A and s_B)
+    for i in range(num_simulations):
+        axs[1].plot(t, s_a_vals[i], color='green', alpha=0.5, lw=0.8)
+        axs[1].plot(t, s_b_vals[i], color='orange', alpha=0.5, lw=0.8)
     axs[1].set_xlabel('Time (s)', fontsize=16)
     axs[1].set_ylabel('Concentration', fontsize=16)
     axs[1].set_title('Stochastic Gene Regulation: Splicing (s_A and s_B)', fontsize=20)
-    axs[1].legend(fontsize=14)
+    axs[1].legend(['s_A', 's_B'], fontsize=14)
     axs[1].grid()
 
     plt.tight_layout()
@@ -250,75 +223,36 @@ def plot_mRNA_time_evolution_sde(t, solutions, save_path=None):
     else:
         plt.show()
 
-    # Zoomed in plot
+
+def plot_phase_plane_sde(sde_solutions, num_simulations, t, save_path):
+    """
+    Function to plot the phase plane for multiple stochastic gene regulation simulations.
+    """
+    sde_solutions = np.array(sde_solutions)  # Convert list of solutions into a numpy array
+    p_a_vals = sde_solutions[:, :, 4]  # Extract protein A values from the solutions
+    p_b_vals = sde_solutions[:, :, 5]  # Extract protein B values from the solutions
+
+    # Plot the individual trajectories
     plt.figure(figsize=(8, 6))
-    plt.plot(t, mean_u_a, label='Mean u_A', color='blue')
-    plt.fill_between(t, mean_u_a - std_u_a, mean_u_a + std_u_a, color='blue', alpha=0.3, label='u_A ± std')
-    plt.plot(t, mean_u_b, label='Mean u_B', color='red')
-    plt.fill_between(t, mean_u_b - std_u_b, mean_u_b + std_u_b, color='red', alpha=0.3, label='u_B ± std')
-    plt.xlabel('Time (s)', fontsize=16)
-    plt.ylabel('Concentration', fontsize=16)
-    plt.title('Stochastic Gene Regulation: Transcription\n(u_A and u_B), zoomed in', fontsize=18)
-    plt.legend(fontsize=14)
-    plt.grid()
-    plt.xlim(20, 25)
-    plt.ylim(0.98, 1.02)
-    zoomed_save_path = save_path.replace('.png', '_zoomed.png') if save_path else None
-    if zoomed_save_path:
-        plt.savefig(zoomed_save_path, dpi=300)
-        plt.close()
-    else:
-        plt.show()
+    for i in range(num_simulations):
+        plt.plot(p_a_vals[i], p_b_vals[i], color='grey', alpha=0.5)  # Light lines for individual trajectories
 
-def vector_field_sde(model_type, grid, initial_conditions, params):
-    """
-    Calculate the vector field for the stochastic model (Route II).
-    This function computes the derivatives of the protein concentrations
-    at each point in the grid to plot the phase plot.
-    """
-    U = np.zeros((len(grid), len(grid)))
-    V = np.zeros((len(grid), len(grid)))
-
-    u_A, u_B, s_A, s_B = initial_conditions[0], initial_conditions[1], initial_conditions[2], initial_conditions[3]
-
-    for i, p_A in enumerate(grid):
-        for j, p_B in enumerate(grid):
-            y0 = [u_A, u_B, s_A, s_B, p_A, p_B]
-            dydt = model_type(y0, 0, 0.01, **params)
-            U[j, i] = dydt[4]  # dp_a/dt
-            V[j, i] = dydt[5]  # dp_b/dt
-
-    return U, V
-
-
-def plot_phase_plane_sde(model_type, initial_conditions, var_indices, grid, params, solution=None, save_path=None):
-    """
-    Plot the phase plane for the stochastic model (Route II)
-    showing the vector field and the trajectory of the system.
-    """
-    X, Y = np.meshgrid(grid, grid)
-    U, V = vector_field_sde(model_type, grid, initial_conditions, params)
-    speed = np.sqrt(U**2 + V**2)  # Magnitude of the vector field
-
-    plt.figure(figsize=(8, 6))
-    strm = plt.streamplot(X, Y, U, V, color=speed, cmap='magma', density=1.0, linewidth=1)
-    plt.colorbar(strm.lines, label=r'Speed (|$dp/dt$|)')
+    # Plot the average trajectory in dark color
+    avg_p_a = np.mean(p_a_vals, axis=0)
+    avg_p_b = np.mean(p_b_vals, axis=0)
+    plt.plot(avg_p_a, avg_p_b, color='darkblue', label='Average trajectory')
 
     plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
     plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
-    plt.title(r'Phase Plane: $p_a$ vs $p_b$ (colored by speed)', fontsize=20)
+    plt.title('Stochastic Gene Regulation: Phase Trajectory (p_a vs p_b)', fontsize=20)
     plt.grid(True)
-
-    if solution is not None:
-        plt.plot(solution[:, var_indices[0]], solution[:, var_indices[1]], color='black', lw=2, label='Trajectory')
-        plt.legend(fontsize=14)
+    plt.legend(fontsize=14)
 
     if save_path:
         plt.savefig(save_path, dpi=300)
         plt.close()
     else:
         plt.show()
-
 
 def main():
     """
@@ -339,7 +273,7 @@ def main():
     print("Probability of the path:", prob)
 
     # Deterministic model
-    t = np.linspace(0, 100, 1000)
+    t = np.linspace(0, 100, 500)
     initial_det = [0.8, 0.8, 0.8, 0.8]
     det_params = {
         'm_a': 2.35, 'm_b': 2.35,
@@ -351,65 +285,55 @@ def main():
     }
 
     sol_det = solve_gene_regulation_det(gene_regulation_det, initial_det, t, det_params)
-    save_path_det = os.path.join(os.path.expanduser("~"), "Desktop", "route1_mRNA_dynamics.png")
-    plot_mRNA_time_evolution_det(t, sol_det, save_path=save_path_det)
+    plot_mRNA_time_evolution_det(t, sol_det, save_path=os.path.join(results_dir, "route1_mRNA_dynamics.png"))
 
-    grid = np.linspace(0, 4, 30)
-    save_path_pp = os.path.join(os.path.expanduser("~"), "Desktop", "route1_phase_plane.png")
     plot_phase_plane_det(
         model_type=gene_regulation_det,
         initial_conditions=initial_det,
-        var_indices=[2, 3],  # indices for p_a and p_b
-        grid=grid,
+        t=t,
         params=det_params,
-        solution=sol_det,
-        save_path=None
-        # save_path=save_path_pp
+        save_path=os.path.join(results_dir, "route1_phase_plane.png")
     )
 
-    # Stochastic model
-    initial_sde = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8] # [u_a, u_b, s_a, s_b, p_a, p_b]
+    # Stochastic model setup
+    initial_sde = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
+    sde_params = {
+        'a_a': 1, 'a_b': 0.25,
+        'b_a': 0.0005, 'b_b': 0.0005,
+        'c_a': 2, 'c_b': 0.5,
+        'beta_a': 2.35, 'beta_b': 2.35,
+        'gamma_a': 1.0, 'gamma_b': 1.0,
+        'n_a': 3, 'n_b': 3,
+        'theta_a': 0.21, 'theta_b': 0.21,
+        'k_a': 1.0, 'k_b': 1.0,
+        'delta_a': 1.0, 'delta_b': 1.0,
+        'm_a': 2.35, 'm_b': 2.35,
+        'sigma_1a': 0.05, 'sigma_2a': 0.05,
+        'sigma_1b': 0.05, 'sigma_2b': 0.05,
+        'noise': True,
+        'time_dependent_alpha': True
+    }
 
-    stoch_params = {
-    # Time-dependent transcription parameters
-    'a_a': 1.0, 'a_b': 0.25,
-    'b_a': 0.0005, 'b_b': 0.0005,
-    'c_a': 2.0, 'c_b': 0.5,
-    # Constant transcription rates (when not using time-dependent)
-    'm_a': 2.35, 'm_b': 2.35,
-    # Splicing and degradation rates
-    'beta_a': 2.35, 'beta_b': 2.35,
-    'gamma_a': 1.0, 'gamma_b': 1.0,
-    # Hill function parameters
-    'n_a': 3, 'n_b': 3,
-    'theta_a': 0.21, 'theta_b': 0.21,
-    # Translation and protein degradation
-    'k_a': 1.0, 'k_b': 1.0,
-    'delta_a': 1.0, 'delta_b': 1.0,
-    # Noise parameters
-    'sigma_1a': 0.05, 'sigma_2a': 0.05,
-    'sigma_1b': 0.05, 'sigma_2b': 0.05,
-    # Control flags
-    'time_dependent_alpha': False,  # Set to True to use sigmoid function
-    'noise': True  # Set to False for deterministic solution
-}
+    num_simulations = 20
+    sde_solutions = []
 
-    simulations = 100
-    sde_results = [
-        solve_gene_regulation_sde(gene_regulation_sde, initial_sde, t, stoch_params)
-        for _ in range(simulations)
-    ]
-    save_path_sde = os.path.join(os.path.expanduser("~"), "Desktop", "sde_mRNA_evolution.png")
-    save_path_pp_sde = os.path.join(os.path.expanduser("~"), "Desktop", "sde_phase_plane_sde.png")
-    plot_mRNA_time_evolution_sde(t, sde_results, save_path=save_path_sde)
+    for _ in range(num_simulations):
+        sol = solve_gene_regulation_sde(gene_regulation_sde, initial_sde, t, sde_params)
+        sde_solutions.append(sol)
+
+    plot_mRNA_time_evolution_sde(
+        t,
+        num_simulations,
+        initial_sde,
+        sde_params,
+        save_path=os.path.join(results_dir, "route2_mRNA_dynamics.png")
+    )
+
     plot_phase_plane_sde(
-        model_type=gene_regulation_sde,
-        initial_conditions=initial_sde,  # [u_a, u_b, s_a, s_b, p_a, p_b]
-        var_indices=[4, 5],  # indices for p_a and p_b
-        grid=grid,
-        params=stoch_params,
-        solution=sde_results[0],  # Mean trajectory across simulations
-        save_path=save_path_pp_sde
+        sde_solutions,
+        num_simulations,
+        t,
+        save_path=os.path.join(results_dir, "route2_phase_plane.png")
     )
 
 
