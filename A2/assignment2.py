@@ -102,7 +102,7 @@ def plot_phase_plane_det(model_type, initial_conditions, t, params, save_path=No
     plt.plot(p_a, p_b, lw=2, color='darkblue')
     plt.xlabel(r'Protein A ($p_a$)', fontsize=16)
     plt.ylabel(r'Protein B ($p_b$)', fontsize=16)
-    plt.title('Protein Phase Trajectory (p_a vs p_b)', fontsize=20)
+    plt.title(r'Protein Phase Trajectory ($p_a$ vs $p_b$)', fontsize=20)
     plt.grid(True)
 
     if save_path:
@@ -147,18 +147,29 @@ def gene_regulation_sde(y, t, dt,
     promotion_splicing_a = (p_b**n_b) / (theta_b**n_b + p_b**n_b)  # Promotion of splicing of mRNA A by protein B
     
     # Transcription 
-    du_a_dt = (alpha_a - beta_a * u_a * promotion_splicing_a) + noise_terms(sigma_1a)  # Transcription rate of pre-mRNA A
-    du_b_dt = (alpha_b - beta_b * u_b * inhibition_splicing_b) + noise_terms(sigma_1b)  # Transcription rate of pre-mRNA B
+    du_a = alpha_a - beta_a * u_a * promotion_splicing_a  # Transcription rate of pre-mRNA A
+    du_b = alpha_b - beta_b * u_b * inhibition_splicing_b  # Transcription rate of pre-mRNA B
     
     # Splicing 
-    ds_a_dt = (beta_a * u_a * promotion_splicing_a - gamma_a * s_a) + noise_terms(sigma_2a)  # Splicing of mRNA A
-    ds_b_dt = (beta_b * u_b * inhibition_splicing_b - gamma_b * s_b) + noise_terms(sigma_2b)  # Splicing of mRNA B
+    ds_a = beta_a * u_a * promotion_splicing_a - gamma_a * s_a  # Splicing of mRNA A
+    ds_b = beta_b * u_b * inhibition_splicing_b - gamma_b * s_b  # Splicing of mRNA B
     
     # Translation 
-    dp_a_dt = k_a * s_a - delta_a * p_a  # Protein A production and degradation
-    dp_b_dt = k_b * s_b - delta_b * p_b  # Protein B production and degradation
-    
-    return du_a_dt, du_b_dt, ds_a_dt, ds_b_dt, dp_a_dt, dp_b_dt
+    dp_a = k_a * s_a - delta_a * p_a  # Protein A production and degradation
+    dp_b = k_b * s_b - delta_b * p_b  # Protein B production and degradation
+
+    deterministic_terms = [du_a, du_b, ds_a, ds_b, dp_a, dp_b]
+
+    noise_terms = [
+        sigma_1a * np.random.normal(0, 1) * np.sqrt(dt) if noise else 0,
+        sigma_1b * np.random.normal(0, 1) * np.sqrt(dt) if noise else 0,
+        sigma_2a * np.random.normal(0, 1) * np.sqrt(dt) if noise else 0,
+        sigma_2b * np.random.normal(0, 1) * np.sqrt(dt) if noise else 0,
+        0,  # Assuming no noise in dp_a
+        0   # Assuming no noise in dp_b
+    ]
+
+    return deterministic_terms, noise_terms
 
 
 def solve_gene_regulation_sde(model_type, y0, t, params):
@@ -172,8 +183,8 @@ def solve_gene_regulation_sde(model_type, y0, t, params):
     sol[0] = y0
 
     for i in range(1, num_steps):
-        dydt = model_type(sol[i-1], t[i-1], dt, **params)
-        sol[i] = sol[i-1] + np.array(dydt) * dt
+        deterministic, noise = model_type(sol[i-1], t[i-1], dt, **params)
+        sol[i] = sol[i-1] + np.array(deterministic) * dt + np.array(noise)
 
     return sol
 
@@ -272,6 +283,7 @@ def plot_phase_plane_sde(sde_solutions, num_simulations, t, save_path):
     else:
         plt.show()
 
+
 def main():
     """
     Main function to run the gene regulation models and Viterbi algorithm.
@@ -282,23 +294,27 @@ def main():
 
     # Viterbi setup
     states = ['Exon', 'Intron']
-    observations = ['A', 'G', 'C', 'G', 'C']
+    observations_list = [
+        ('AGCGC', ['A', 'G', 'C', 'G', 'C']),
+        ('AUUAUU', ['A', 'U', 'U', 'A', 'U'])
+    ]
     start_probs = {'Exon': 0.5, 'Intron': 0.5}
     trans_probs = {
         'Exon': {'Exon': 0.9, 'Intron': 0.1}, 
         'Intron': {'Exon': 0.2, 'Intron': 0.8}
-        }
+    }
     emit_probs = {
         'Exon': {'A': 0.25, 'U': 0.25, 'G': 0.25, 'C': 0.25}, 
         'Intron': {'A': 0.4, 'U': 0.4, 'G': 0.05, 'C': 0.15}
-        }
+    }
 
-    prob, path = viterbi_algorithm(observations, states, start_probs, trans_probs, emit_probs)
-    print("Most probable path:", path)
-    print("Probability of the path:", prob)
+    for label, observations in observations_list:
+        prob, path = viterbi_algorithm(observations, states, start_probs, trans_probs, emit_probs)
+        print(f"Most probable path for '{label}': {path}")
+        print(f"Probability of the most probable path for '{label}': {prob:.6f}")
 
     # Deterministic model
-    t = np.linspace(0, 100, 1000)
+    t = np.linspace(0, 100, 100000)
     initial_det = [0.8, 0.8, 0.8, 0.8]
     det_params = {
         'm_a': 2.35, 'm_b': 2.35,
@@ -326,7 +342,7 @@ def main():
     )
 
     # Stochastic model setup
-    t = np.linspace(0, 100, 1000)
+    t = np.linspace(0, 100, 100000)
     initial_sde = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
     sde_params = {
         'a_a': 1, 'a_b': 0.25,
