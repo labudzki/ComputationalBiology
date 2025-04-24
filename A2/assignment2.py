@@ -147,18 +147,18 @@ def gene_regulation_sde(y, t, dt,
     promotion_splicing_a = (p_b**n_b) / (theta_b**n_b + p_b**n_b)  # Promotion of splicing of mRNA A by protein B
     
     # Transcription 
-    du_a = alpha_a - beta_a * u_a * promotion_splicing_a  # Transcription rate of pre-mRNA A
+    du_a_dt = alpha_a - beta_a * u_a * promotion_splicing_a  # Transcription rate of pre-mRNA A
     du_b = alpha_b - beta_b * u_b * inhibition_splicing_b  # Transcription rate of pre-mRNA B
     
     # Splicing 
-    ds_a = beta_a * u_a * promotion_splicing_a - gamma_a * s_a  # Splicing of mRNA A
+    ds_a_dt = beta_a * u_a * promotion_splicing_a - gamma_a * s_a  # Splicing of mRNA A
     ds_b = beta_b * u_b * inhibition_splicing_b - gamma_b * s_b  # Splicing of mRNA B
     
     # Translation 
-    dp_a = k_a * s_a - delta_a * p_a  # Protein A production and degradation
-    dp_b = k_b * s_b - delta_b * p_b  # Protein B production and degradation
+    dp_a_dt = k_a * s_a - delta_a * p_a  # Protein A production and degradation
+    dp_b_dt = k_b * s_b - delta_b * p_b  # Protein B production and degradation
 
-    deterministic_terms = [du_a, du_b, ds_a, ds_b, dp_a, dp_b]
+    deterministic_terms = [du_a_dt, du_b, ds_a_dt, ds_b, dp_a_dt, dp_b_dt]
 
     noise_terms = [
         sigma_1a * np.random.normal(0, 1) * np.sqrt(dt) if noise else 0,
