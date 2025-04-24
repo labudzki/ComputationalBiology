@@ -97,14 +97,17 @@ def vector_field_det(model_type, grid, initial_conditions, params):
     U = np.zeros((len(grid), len(grid)))
     V = np.zeros((len(grid), len(grid)))
     
-    r_A, r_B = initial_conditions[0], initial_conditions[1]
+    # r_A, r_B = initial_conditions[0], initial_conditions[1]
 
     for i, p_A in enumerate(grid):
         for j, p_B in enumerate(grid):
+            solution = solve_gene_regulation_det(model_type, [initial_conditions[0], initial_conditions[1], p_A, p_B], grid, params)
+            r_A = solution[0]
+            r_B = solution[1]
             y0 = [r_A, r_B, p_A, p_B]
             dydt = model_type(y0, 0, **params)
-            U[i, j] = dydt[2]  # dp_A/dt
-            V[i, j] = dydt[3]  # dp_B/dt
+            U[j, i] = dydt[2]  # dp_A/dt
+            V[j, i] = dydt[3]  # dp_B/dt
 
     print("U max:", np.max(np.abs(U)))
     print("V max:", np.max(np.abs(V)))
@@ -282,8 +285,8 @@ def vector_field_sde(model_type, grid, initial_conditions, params):
         for j, p_B in enumerate(grid):
             y0 = [u_A, u_B, s_A, s_B, p_A, p_B]
             dydt = model_type(y0, 0, 0.01, **params)
-            U[i, j] = dydt[4]  # dp_a/dt
-            V[i, j] = dydt[5]  # dp_b/dt
+            U[j, i] = dydt[4]  # dp_a/dt
+            V[j, i] = dydt[5]  # dp_b/dt
 
     return U, V
 
@@ -357,7 +360,8 @@ def main():
         grid=grid,
         params=det_params,
         solution=sol_det,
-        save_path=save_path_pp
+        save_path=None
+        # save_path=save_path_pp
     )
 
     # Stochastic model
