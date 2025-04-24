@@ -103,8 +103,8 @@ def vector_field_det(model_type, grid, initial_conditions, params):
         for j, p_B in enumerate(grid):
             y0 = [r_A, r_B, p_A, p_B]
             dydt = model_type(y0, 0, **params)
-            U[j, i] = dydt[2]  # dp_A/dt
-            V[j, i] = dydt[3]  # dp_B/dt
+            U[i, j] = dydt[2]  # dp_A/dt
+            V[i, j] = dydt[3]  # dp_B/dt
 
     print("U max:", np.max(np.abs(U)))
     print("V max:", np.max(np.abs(V)))
@@ -247,6 +247,26 @@ def plot_mRNA_time_evolution_sde(t, solutions, save_path=None):
     else:
         plt.show()
 
+    # Zoomed in plot
+    plt.figure(figsize=(8, 6))
+    plt.plot(t, mean_u_a, label='Mean u_A', color='blue')
+    plt.fill_between(t, mean_u_a - std_u_a, mean_u_a + std_u_a, color='blue', alpha=0.3, label='u_A ± std')
+    plt.plot(t, mean_u_b, label='Mean u_B', color='red')
+    plt.fill_between(t, mean_u_b - std_u_b, mean_u_b + std_u_b, color='red', alpha=0.3, label='u_B ± std')
+    plt.xlabel('Time (s)', fontsize=16)
+    plt.ylabel('Concentration', fontsize=16)
+    plt.title('Stochastic Gene Regulation: Transcription\n(u_A and u_B), zoomed in', fontsize=18)
+    plt.legend(fontsize=14)
+    plt.grid()
+    plt.xlim(20, 25)
+    plt.ylim(0.98, 1.02)
+    zoomed_save_path = save_path.replace('.png', '_zoomed.png') if save_path else None
+    if zoomed_save_path:
+        plt.savefig(zoomed_save_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
 def vector_field_sde(model_type, grid, initial_conditions, params):
     """
     Calculate the vector field for the stochastic model (Route II).
@@ -262,8 +282,8 @@ def vector_field_sde(model_type, grid, initial_conditions, params):
         for j, p_B in enumerate(grid):
             y0 = [u_A, u_B, s_A, s_B, p_A, p_B]
             dydt = model_type(y0, 0, 0.01, **params)
-            U[j, i] = dydt[4]  # dp_a/dt
-            V[j, i] = dydt[5]  # dp_b/dt
+            U[i, j] = dydt[4]  # dp_a/dt
+            V[i, j] = dydt[5]  # dp_b/dt
 
     return U, V
 
