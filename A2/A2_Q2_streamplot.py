@@ -112,6 +112,7 @@ def plot_phase_plane(model_type, initial_conditions, var_indices, grid, params, 
         plt.axhline(y=params["alpha"]/params["beta"], color='red', lw=2, linestyle=":")
 
         # y-nullcline
+        plt.axvline(x=params["gamma"]/params["delta"], color='blue', lw=2, linestyle=":", label='y-nullcline(s)')
         plt.axhline(y=0, color='blue', lw=2, linestyle=":")        
         plt.legend()
 
