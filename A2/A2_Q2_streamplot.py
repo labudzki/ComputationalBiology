@@ -138,7 +138,7 @@ params = {
 }
 
 solution = solve_gene_regulation_model(
-    gene_regulation_model_3,
+    gene_regulation_model_lv,
     initial_conditions,
     t,
     params
