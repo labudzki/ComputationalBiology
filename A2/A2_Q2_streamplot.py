@@ -1,20 +1,16 @@
+"""
+Deterministic Gene Regulation Model: Lotka-Volterra
+Forked from assignment2.py
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import scipy.optimize as sp
 
-"""
-Forked and modified (butchered) code from viterbi.py
-New functions:
-- gene_regulation_model_3
-Modified functions:
-- 'vector_field'
-- 'plot_phase_plane'
-"""
-
-def gene_regulation_model_3(y0, t, alpha, beta, gamma, delta): 
+def gene_regulation_model_lv(y0, t, alpha, beta, gamma, delta): 
     """
-    Gene regulation model for ...
+    Lotka-Volterra (Predator-Prey) Model
 
     Parameters: description listed in the main() function. 
 
@@ -153,7 +149,7 @@ var_indices = [0,1]  # x vs y
 grid_vals = np.linspace(-2.5, 10, 20) # show saddle-point at (0,0)
 
 plot_phase_plane(
-    gene_regulation_model_3,
+    gene_regulation_model_lv,
     var_indices=var_indices,
     initial_conditions=initial_conditions,
     grid=grid_vals,
