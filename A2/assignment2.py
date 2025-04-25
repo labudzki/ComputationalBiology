@@ -188,7 +188,7 @@ def solve_gene_regulation_sde(model_type, y0, t, params):
 def plot_pre_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_params, save_path=None):
     """
     Plot the time evolution of pre-mRNA concentrations (u_A and u_B) for Route II.
-    Individual simulations are plotted as semi-transparent lines.
+    Individual simulations are plotted as semi-transparent lines, with average trajectories highlighted.
     """
 
     solutions = []
@@ -204,10 +204,17 @@ def plot_pre_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde
     for i in range(num_simulations):
         plt.plot(t, u_a_vals[i], color='blue', alpha=0.5, lw=0.8)
         plt.plot(t, u_b_vals[i], color='red', alpha=0.5, lw=0.8)
+
+    # Plot average trajectories
+    avg_u_a = np.mean(u_a_vals, axis=0)
+    avg_u_b = np.mean(u_b_vals, axis=0)
+    plt.plot(t, avg_u_a, color='darkblue', lw=2, label=r'Average $u_A$')
+    plt.plot(t, avg_u_b, color='darkred', lw=2, label=r'Average $u_B$')
+
     plt.xlabel('Time (s)', fontsize=16)
     plt.ylabel('Concentration', fontsize=16)
-    plt.title(r'mRNA Time Evolution($u_A$ and $u_B$)', fontsize=20)
-    plt.legend([r'$u_A$', r'$u_B$'], fontsize=14)
+    plt.title(r'pre-mRNA Time Evolution ($u_A$ and $u_B$)', fontsize=20)
+    plt.legend(fontsize=14)
     plt.grid()
 
     if save_path:
@@ -220,7 +227,7 @@ def plot_pre_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde
 def plot_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_params, save_path=None):
     """
     Plot the time evolution of mRNA concentrations (s_A and s_B) for Route II.
-    Individual simulations are plotted as semi-transparent lines.
+    Individual simulations are plotted as semi-transparent lines, with average trajectories highlighted.
     """
     # Run simulations and collect results
     solutions = []
@@ -237,10 +244,17 @@ def plot_mRNA_time_evolution_sde(t, num_simulations, initial_conditions, sde_par
     for i in range(num_simulations):
         plt.plot(t, s_a_vals[i], color='green', alpha=0.5, lw=0.8)
         plt.plot(t, s_b_vals[i], color='orange', alpha=0.5, lw=0.8)
+
+    # Plot average trajectories
+    avg_s_a = np.mean(s_a_vals, axis=0)
+    avg_s_b = np.mean(s_b_vals, axis=0)
+    plt.plot(t, avg_s_a, color='darkgreen', lw=2, label=r'Average $s_A$')
+    plt.plot(t, avg_s_b, color='darkorange', lw=2, label=r'Average $s_B$')
+
     plt.xlabel('Time (s)', fontsize=16)
     plt.ylabel('Concentration', fontsize=16)
-    plt.title(r'mRNA Time Evolution($s_A$ and $s_B$)', fontsize=20)
-    plt.legend([r'$s_A$', r'$s_B$'], fontsize=14)
+    plt.title(r'mRNA Time Evolution ($s_A$ and $s_B$)', fontsize=20)
+    plt.legend(fontsize=14)
     plt.grid()
 
     if save_path:
@@ -254,14 +268,14 @@ def plot_phase_plane_sde(sde_solutions, num_simulations, t, save_path):
     """
     Function to plot the phase plane for multiple stochastic gene regulation simulations.
     """
-    sde_solutions = np.array(sde_solutions)  # Convert list of solutions into a numpy array
-    p_a_vals = sde_solutions[:, :, 4]  # Extract protein A values from the solutions
-    p_b_vals = sde_solutions[:, :, 5]  # Extract protein B values from the solutions
+    sde_solutions = np.array(sde_solutions)  
+    p_a_vals = sde_solutions[:, :, 4]  # Get protein A values from the solutions
+    p_b_vals = sde_solutions[:, :, 5]  # Get protein B values from the solutions
 
     # Plot the individual trajectories
     plt.figure(figsize=(8, 6))
     for i in range(num_simulations):
-        plt.plot(p_a_vals[i], p_b_vals[i], color='grey', alpha=0.5)  # Light lines for individual trajectories
+        plt.plot(p_a_vals[i], p_b_vals[i], color='grey', alpha=0.5)  
 
     # Plot the average trajectory in dark color
     avg_p_a = np.mean(p_a_vals, axis=0)
