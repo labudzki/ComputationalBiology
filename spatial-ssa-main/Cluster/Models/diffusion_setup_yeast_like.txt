@@ -1,0 +1,33 @@
+yeast_like_phase_separation
+
+> Species numbers
+Particle 10000
+
+> Rate constants and diffusion coefficients
+D	1
+
+// Intermediate kappa. Small spots form
+kappa 2000000
+chi   30000000
+// chi   20000000
+
+// High kappa. Slow and diffuse patterns form
+// kappa 2000000
+// chi   20000000
+
+// Low kappa. Dots form
+// kappa 200000
+// chi   20000000
+
+// Intermediate, but chi and kappa lowered by one magnitude
+// Increases noise. Doesn't form spot spontaneously, but does retain spot
+// kappa 100000
+// chi   2000000
+
+// Decrease one magnitude more
+// kappa 10000
+// chi   200000
+
+
+particles_per_area      40000
+particles_per_volume    8000000

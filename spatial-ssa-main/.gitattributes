@@ -1,0 +1,10 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Set everything in the linux folder to linux endings
+Cluster/* text eol=lf
+Cluster/Models/* text eol=lf
+Cluster/Grids/* text eol=lf
+
+# Executable files are binary
+*.exe binary

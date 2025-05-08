@@ -1,0 +1,12 @@
+testrun
+
+> Species numbers
+Particle 10000
+
+
+> Rate constants and diffusion coefficients
+D	1
+kappa 2000000
+chi   1000000
+// kappa	10000 200000 log 3
+// chi     5000  100000 log 3

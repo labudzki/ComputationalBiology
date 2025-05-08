@@ -1,0 +1,42 @@
+{
+    "configurations": [
+        {
+            "name": "C/C++: g++.exe build and debug active file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}\\SpatialSSA.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "internalConsoleOptions": "openOnSessionStart",
+            "avoidWindowsConsoleRedirection": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\mingw32\\bin\\gdb.exe",
+            "logging": {
+                "exceptions": false,
+                "moduleLoad": false,
+                "programOutput": true
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {   // silence thread console messages
+                    "description": "Disable ThreadEvent Messages",
+                    "text": "-interpreter-exec console \"set print thread-events off\"",
+                    "ignoreFailures": true
+                }]
+            ],
+            "preLaunchTask": "C/C++: g++.exe build active file"
+        }
+    ],
+    "version": "2.0.0"
+}

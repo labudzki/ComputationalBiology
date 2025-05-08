@@ -1,0 +1,12 @@
+Testrun
+
+> Species numbers
+fox	5
+rabbit	10
+
+> Rate constants and diffusion coefficients
+D	1
+
+alpha	1
+beta	1
+gamma	1

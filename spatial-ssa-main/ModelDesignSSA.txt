@@ -1,0 +1,140 @@
+Requirements:
+    1. Adding and removing species and reactions by hand
+    2. Allowing different grid geometries (requires distance)
+    3. Easily changing backend of model
+
+Implementation details:
+
+    Classes:
+        1. Reaction class
+            General class containing information for all
+            possible reactions.
+        2. Cell class
+            Only state vector and neighbours
+            propensities are calculated on system level
+        3. System class
+            Adding and removing species
+            Adding and removing reactions
+
+
+
+
+
+    #include <string>
+
+    using namespace std;
+
+    class Reaction {
+        public:
+            list of names
+            list of species indices
+            list of changes
+
+            OR map of both
+
+            rate k_reaction
+
+            int index of reaction
+            int n_species_involved
+
+        Reaction(map, k, index)
+
+    }
+
+    Reaction::Reaction(map, k, index){
+        copy to own variables
+    }
+
+
+
+    class Cell{
+
+        public:
+            Cell neighbours[MAX_NEIGHBOURS]
+
+            int state[n_species]
+
+            Cell(n_species)
+            void add_neighbour(Cell neighbourCell)
+            void set_species_number(idx, value)
+
+            
+
+
+    }
+
+
+    class System {
+        public:
+
+            // Names of species with indices used
+            map species[MAX_SPECIES]
+            float diffusionCoefficients
+            int n_species
+
+            // All chemical reactions
+            Reaction reactions[MAX_REACTIONS]
+            int n_reactions
+
+            // "State vector" or list of cells
+            ReactionCell cells[MAX_CELLS]
+            int n_cells
+
+            // Functions
+
+            void add_species(signature)
+            void add_reaction(signature)
+
+            void run(signature)
+
+
+        private:
+
+            safety checks
+            recalculate propensities
+
+            find species and time
+            update state
+
+
+
+    }
+
+    
+
+
+    void System::add_species(str name,double diffusionCoefficient){
+
+        check for duplicate
+
+        add to map with idx as n_species
+        n_species ++
+
+        diffusionCoefficients[idx] = diffusionCoefficient
+
+    }
+
+    void System::add_reaction(map with (str name, int dS) pairs, float k_reaction){
+        
+        check if all names in species map
+
+        index = n_reactions
+        n_reactions++
+
+        make Reaction reaction(map, k, index)
+        
+
+        add to reaction list
+        
+        
+        // Can be done with <map>
+        // Use <string> for better handeling of names
+        // throw error if name in map is not in species
+
+    }
+    
+    void System::run(){
+
+    }
+
+    

@@ -1,0 +1,31 @@
+Lotka-Volterra
+
+> Rate constants and diffusion coefficients
+// Diffusion coefficients
+D
+
+// Rate constants
+alpha
+beta
+gamma
+
+> Species, species dimension and diffusion constants name
+// In solution
+fox	3	D
+rabbit	3	D
+
+> Reactions
+Rabbit growth
+rabbit -1 rabbit 2
+alpha
+
+Predation
+rabbit -1 fox -1 fox 2
+beta
+
+Fox death
+fox -1
+gamma
+
+
+

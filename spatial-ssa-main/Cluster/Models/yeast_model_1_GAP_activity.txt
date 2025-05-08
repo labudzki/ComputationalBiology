@@ -1,0 +1,117 @@
+// Whitespace at the end of line (especially change in reactants) causes strange behaviour
+// Make sure to remove all whitespace!!!
+
+Yeast polarization model
+
+> Rate constants and diffusion coefficients
+// Diffusion coefficients
+D_c
+D_m_d
+D_m
+
+// Rate constants
+k_D
+k_tD
+k_d
+k_tg
+k_gt
+k_tB
+k_b
+k_bF
+k_bf
+k_bfD
+k_F
+k_f
+k_fd
+k_bfd
+
+// Phase seperation constants
+kappa
+chi
+
+> Species, species dimension and diffusion constants name
+// In solution
+Cdc42-GDP_c	3	D_c
+Bem1_c		3	D_c
+GEF_c		3	D_c
+
+// On membrane
+Cdc42-GDP_m	2	D_m_d
+Cdc42-GTP_m	2	D_m
+GAP_m		2	D_m
+Cdc42-GAP_m	2	D_m
+
+Bem1_m		2	D_m
+Bem1-GEF_m	2	D_m
+GEF_m		2	D_m
+
+> Reactions and rate
+// Attachment of cytosolic Cdc42-GDP to the membrane
+Cdc42-GDP membrane attachment
+Cdc42-GDP_c -1 Cdc42-GDP_m 1
+k_D
+
+// Effective membrane-recruitment of cytosolic Cdc42-GDP by membrane-bound Cdc42-GTP
+Cdc42-GDP membrane recruitment by Cdc42-GTP
+Cdc42-GDP_c -1 Cdc42-GTP_m -1 Cdc42-GDP_m 1 Cdc42-GTP_m 1
+k_tD
+
+// Detachment of inactive Cdc42 from the membrane
+Cdc42 membrane detachment
+Cdc42-GDP_m -1 Cdc42-GDP_c 1
+k_d
+
+// Cdc42-GAP complex formation on the membrane
+Cdc42-GAP complex formation on the membrane
+Cdc42-GTP_m -1 GAP_m -1 Cdc42-GAP_m 1
+k_tg
+
+// Hydrolysis of Cdc42 in the Cdc42–GAP complex and subsequent dissociation of the complex into membrane-bound free GAP and Cdc42-GDP
+Cdc42-GAP hydrolysis
+Cdc42-GAP_m -1 GAP_m 1 Cdc42-GDP_m 1
+k_gt
+
+// Recruitment of Bem1 by membrane-bound Cdc42-GTP
+Bem1 recruitment by membrane-bound Cdc42-GTP
+Bem1_c -1 Bem1_m 1 Cdc42-GTP_m -1 Cdc42-GTP_m 1
+k_tB
+
+// Detachment of Bem1 from the membrane
+Bem1 membrane detachment
+Bem1_m -1 Bem1_c 1
+k_b
+
+// Bem1–GEF complex formation on the membrane by recruitment of GEF to Bem1
+Bem1-GEF complex formation on membrane
+Bem1_m -1 GEF_c -1 Bem1-GEF_m 1
+k_bF
+
+// Dissociation of Bem1–GEF complexes, releasing GEF into the cytosol
+Bem1-GEF complexes dissociation
+Bem1-GEF_m -1 Bem1_m 1 GEF_c 1
+k_bf
+
+// Recruitment of Cdc42 from the cytosol by Bem1–GEF complexes
+Cdc42 recruitment by Bem1-GEF
+Cdc42-GDP_c -1 Cdc42-GTP_m 1 Bem1-GEF_m -1 Bem1-GEF_m 1
+k_bfD
+
+// Attachment of GEF from the cytosol
+GEF membrane attachment
+GEF_c -1 GEF_m 1
+k_F
+
+// Detachment of (free) membrane-bound GEF
+GEF membrane detachment
+GEF_m -1 GEF_c 1
+k_f
+
+// Cdc42 nucleotide exchange driven by (free) membrane-bound GEF
+Cdc42 nucleotide exchange by GEF
+Cdc42-GDP_m -1 Cdc42-GTP_m 1 GEF_m -1 GEF_m 1
+k_fd
+
+// Cdc42 nucleotide exchange driven by membrane-bound Bem1-GEF complexes
+Cdc42 nucleotide exchange by Bem1-GEF
+Cdc42-GDP_m -1 Cdc42-GTP_m 1 Bem1-GEF_m -1 Bem1-GEF_m 1
+k_bfd

@@ -1,0 +1,18 @@
+Diffusion model
+
+> Rate constants and diffusion coefficients
+// Diffusion coefficients
+D
+
+// Phase seperation constants
+kappa
+chi
+particles_per_area
+particles_per_volume
+
+> Species, species dimension and diffusion constants name
+Particle	2	D
+
+> Reactions and rate
+
+

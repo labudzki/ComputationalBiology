@@ -1,0 +1,28 @@
+Bem1_Knockout
+
+// Should not polarize
+// Bem1 and reactions removed
+
+> Species numbers
+Cdc42-GDP_c	8690
+GEF_c		934
+
+// On membrane
+GAP_m		1571
+
+> Rate constants and diffusion coefficients
+D_c	    11
+D_m_d	0.2
+D_m	    0.01
+
+k_D	    0.015
+k_tD	0.17
+k_d	    0.22
+k_tg	0.053
+k_gt	0.35
+k_F	    0.43
+k_f	    0.26
+k_fd	0.0077
+
+kappa   0
+chi     0

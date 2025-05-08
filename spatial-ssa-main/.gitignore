@@ -1,0 +1,37 @@
+# code block files
+
+*.depend
+*.layout
+*.cbp
+
+# python notebook files
+**/.ipynb_checkpoints
+
+
+# data files
+
+**/Data
+**/Data archive
+**/Figures
+
+# Executables
+*.exe
+
+# SFML libraries
+*.dll
+
+# Batch files for cluster
+*.bat
+
+# general ignored files
+
+.DS_Store
+build/
+obj/
+*.o
+Debug*/
+Release*/
+*.mode*
+*.app/
+*.pyc
+.svn/

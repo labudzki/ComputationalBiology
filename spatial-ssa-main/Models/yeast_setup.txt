@@ -1,0 +1,46 @@
+Wildtype_phase_separate
+
+> Species numbers
+Cdc42-GDP_c	8690
+Bem1_c		1037
+GEF_c		934
+
+// On membrane
+GAP_m		2170
+
+> Rate constants and diffusion coefficients
+D_c	11
+D_m_d	0.2
+D_m	0.01
+
+k_D	0.015
+k_tD	0.17
+k_d	0.22
+k_tg	0.053
+k_gt	0.35
+k_tB	0.68
+k_b	0.032
+k_bF	0.29
+k_bf	0.25
+k_bfD	0.025
+k_F	0.43
+k_f	0.26
+k_fd	0.0077
+k_bfd	0.0154
+
+// kappa   200000
+// chi     400000
+
+kappa   200000
+chi     2000000
+
+particles_per_area      40000
+particles_per_volume    8000000
+
+free_area_fraction   1
+free_volume_fraction 1
+
+// kappa  	1000 10000000 log 3
+// chi    	20000 2000000 log 2
+
+

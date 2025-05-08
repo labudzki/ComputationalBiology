@@ -1,0 +1,34 @@
+Immobile_Cdc42
+
+> Species numbers
+Cdc42-GDP_m	8690
+Bem1_c		1037
+GEF_c		934
+
+// On membrane
+GAP_m		2170
+
+> Rate constants and diffusion coefficients
+D_c	    11
+// Low diffusion of species containing Cdc42
+D_low	0.0025
+D_m	    0.01
+
+k_D	    0.015
+k_tD	0.17
+// No dissociation from membrane
+k_d	    0.0
+k_tg	0.053
+k_gt	0.35
+k_tB	0.68
+k_b	    0.032
+k_bF	0.29
+k_bf	0.25
+k_bfD	0.025
+k_F	    0.43
+k_f	    0.26
+k_fd	0.0077
+k_bfd	0.0154
+
+kappa   0
+chi     0

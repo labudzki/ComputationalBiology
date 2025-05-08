@@ -1,0 +1,35 @@
+
+# Set compiler to g++
+CC=g++
+
+# Turns on all warnings
+OPTS= -Wall --pedantic
+
+# Specifies libraries to include
+# -I[/path/to/header-files]
+#
+#    Add search path to header files (.h) or (.hpp).
+
+LIBS= -lm -lsfml-graphics -lsfml-window -lsfml-system
+SRC=Nanostar_Binding.cpp RecordData.cpp
+
+# Start has dependencies of all object versions of the source files
+# Run linker [$(CC)] with warnings [$(OPTS)], generating executable files from
+# object files [-o] 
+start: $(SRC:.cpp=.o)
+	$(CC) $(OPTS) -o start $(SRC:.cpp=.o) $(LIBS)
+	
+
+Nanostar_Binding.o: Nanostar_Binding.cpp RecordData.h
+RecordData.o: RecordData.cpp RecordData.h
+
+# Run compiler on Nanostar_Binding and RecordData
+# $@ is target (%.o, any object file) and $< is first prerequisite (%.cpp, any c++ file).
+%.o: %.cpp
+	$(CC) $(OPTS) -c $< -o $@
+
+
+# Remove generated object files. Not called in main functionality.
+clean:
+	rm -f *.o
+	rm -f start

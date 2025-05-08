@@ -1,0 +1,2 @@
+This has CRLF ends
+This is a change

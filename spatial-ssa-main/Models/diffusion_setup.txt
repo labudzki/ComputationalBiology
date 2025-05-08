@@ -1,0 +1,28 @@
+testrun
+
+> Species numbers
+Particle 5000
+
+
+> Rate constants and diffusion coefficients
+D	1
+
+
+
+kappa 107
+chi   340000
+
+// Good setups
+// kappa 500
+// chi   1000000
+
+// kappa 50
+// chi   200000
+
+particles_per_area      40000
+particles_per_volume    8000000
+// Small and slow
+// kappa 200000
+// chi   100000
+// kappa	10000 200000 log 3
+// chi     5000  100000 log 3
