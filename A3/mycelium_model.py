@@ -1,148 +1,210 @@
-import numpy as np 
+import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage import laplace
+from scipy.sparse import diags, linalg
 from matplotlib.animation import FuncAnimation
+import random
 
 params = {
     "grid_size": 100,
-    "dt": 0.2, # Time step for nutrient diffusion
-    "D_G": 0.9, # Diffusion coefficient for nutrients
-    "V_max": 0.7, # Maximum velocity of nutrient uptake (Enzyme kinetics)
-    "K_m": 0.5, # Half-saturation constant for nutrient uptake (Enzyme kinetics)
-    "mu": 0.9, # Growth rate of mycelium based on nutrient uptake
-    "branch_prob_1": 0.9, # Probability of branching/creating a tip
-    "branch_prob_2": 0.5, 
-    "branch_prob_3": 0.2, 
-    "down_growth_prob": 0.55, # Probability of growing downwards
-    "side_growth_prob": 0.45, # Probability of growing to the sides
-    "growth_thresh": 0.001, # Threshold of nutrient concentration for growth (in each cell/locally)
-    "lambda": 0.05 # Decay rate of biomass (because of energy consumption)
+    "dt": 0.2,
+    "D_P": 0.5,
+    "D_N": 0.6,
+    "V_max_P": 0.6,
+    "V_max_N": 0.8,
+    "K_m_P": 0.3,
+    "K_m_N": 0.2,
+    "mu": 0.9,
+    "lambda": 0.05,
+    "branch_prob": 0.07,
+    "adhesion": 0.1,
+    "volume_constraint": 0.01,
+    "chemotaxis_strength": 3.0,
+    "max_branch_depth": 5,
+    "nutrient_threshold": 0.7  # Stop tip if nutrient is high enough
 }
 
 def initialise_grids(grid_size):
     """
     Initialise the nutrients and biomass on the grid.
-    Initial spore is at the top-middle of the grid.
-    Two nutrient hotspots are placed at (1/3, 1/4) and (2/3, 3/4).
     """
-    nutrient_grid = np.zeros((grid_size, grid_size), dtype=float)  # Nutrient grid
-    root_grid = np.zeros((grid_size, grid_size), dtype=int)  # Biomass grid
-    tips = set()
+    phosphate = np.zeros((grid_size, grid_size))
+    nitrogen = np.zeros((grid_size, grid_size))
+    root_grid = np.zeros((grid_size, grid_size), dtype=int)
+    tip_map = {}  
 
-    # Initial spore at top-middle
     center = grid_size // 2
     root_grid[0, center] = 1
-    tips.add((0, center))
+    tip_map[1] = (0, center, 0, True)
 
-    # Two nutrient hotspots (N1 and N2)
-    nutrient_grid[grid_size // 3, grid_size // 4] = 1.0
-    nutrient_grid[2 * grid_size // 3, 3 * grid_size // 4] = 1.0
-    nutrient_grid[grid_size // 3, grid_size // 4] = 1.0
-    # nutrient_grid[0, grid_size//2 - 2] = 1.0
+    phosphate[grid_size // 3, grid_size // 4] = 1.0
+    nitrogen[2 * grid_size // 3, 3 * grid_size // 4] = 1.0
 
-    return nutrient_grid, root_grid, tips
+    return phosphate, nitrogen, root_grid, tip_map
 
-def update_nutrients(grid_size, G, M, p):
+def build_laplacian_matrix(grid_size, D):
     """
-    Update the nutrient grid based on diffusion and uptake.
+    Build a Laplacian matrix for a 2D grid with Dirichlet boundary conditions.
     """
-    laplacian_G = laplace(G)
-    uptake = (p["V_max"] * G) / (p["K_m"] + G + 1e-9) * (M)
-    dG = p["D_G"] * laplacian_G - uptake
-    G += p["dt"] * dG
-    G = np.clip(G, 0, 1) 
-    G[grid_size // 3, grid_size // 4] = 1.0 # Reset nutrient hotspots to 1 to remain a constant source
-    G[2 * grid_size // 3, 3 * grid_size // 4] = 1.0
-    # G[0, grid_size//2 - 2] = 1.0
-    return G
+    N = grid_size * grid_size
+    main_diag = -4 * np.ones(N)
+    side_diag = np.ones(N - 1)
+    side_diag[np.arange(1, N) % grid_size == 0] = 0  
+    up_down_diag = np.ones(N - grid_size)
 
-def grow_tips(M, G, tips, p):
+    diagonals = [main_diag, side_diag, side_diag, up_down_diag, up_down_diag]
+    offsets = [0, -1, 1, -grid_size, grid_size]
+    L = diags(diagonals, offsets, shape=(N, N), format='lil')
+
+    L = D * L
+    return L
+
+def steady_state_nutrient(C_init, biomass, params, nutrient_type='P', tol=1e-4, max_iter=50):
+    """
+    Solve the steady-state nutrient field using a finite difference method.
+
+    C_init: Initial concentration of the nutrient.
+    biomass: Current biomass grid.
+    params: Simulation parameters.
+    nutrient_type: 'P' for phosphate, 'N' for nitrogen.
+    tol: Tolerance for convergence.
+    max_iter: Maximum number of iterations.
+
+    Returns the updated nutrient concentration grid.
+    """
+    grid_size = C_init.shape[0]
+    C = C_init.copy()
+    
+    if nutrient_type == 'P':
+        D = params["D_P"]
+        V_max = params["V_max_P"]
+        K_m = params["K_m_P"]
+        source = [(grid_size // 3, grid_size // 4)]
+    else:
+        D = params["D_N"]
+        V_max = params["V_max_N"]
+        K_m = params["K_m_N"]
+        source = [(2 * grid_size // 3, 3 * grid_size // 4)]
+
+    N = grid_size * grid_size
+    L = build_laplacian_matrix(grid_size, D).tolil()
+
+    source_indices = [x * grid_size + y for (x, y) in source]
+
+    for iter in range(max_iter):
+        uptake_coeff = (V_max * biomass) / (K_m + C)
+        uptake_diag = diags(uptake_coeff.flatten(), 0)
+
+        # Build system matrix: D * Laplacian - uptake
+        A = (L - uptake_diag).tocsr()
+
+        # RHS is zero except for Dirichlet boundaries
+        b = np.zeros(N)
+        for idx in source_indices:
+            A[idx, :] = 0
+            A[idx, idx] = 1
+            b[idx] = 1.0
+
+        # Solve matrices for steady-state nutrient concentration
+        C_new = linalg.spsolve(A, b).reshape((grid_size, grid_size))
+        C_new = np.clip(C_new, 0, 1)
+
+        if np.linalg.norm(C_new - C) < tol:
+            break
+        C = C_new
+
+    return C
+
+
+def get_neighbors(i, j, grid_size):
+    """
+    Get valid neighbors for a given cell position (i, j). Moore Neighborhood with up excluded due to geotropism.
+    """
+    return [(i + di, j + dj) for di, dj in [(1, 0), (0, -1), (0, 1)] if 0 <= i + di < grid_size and 0 <= j + dj < grid_size]
+
+def calculate_energy(i, j, P, N, params):
+    """
+    Calculate the energy for a given cell position (i, j) based on nutrient concentrations and other parameters.
+    Cellular potts model energy function.
+    """
+    chemotaxis = params["chemotaxis_strength"] * (P[i, j] + N[i, j])
+    adhesion = random.uniform(0, params["adhesion"])
+    volume_penalty = random.uniform(0, params["volume_constraint"])
+    return -chemotaxis + adhesion + volume_penalty
+
+def grow_tips(grid, P, N, tips, params):
     """
     Grow the tips of the mycelium based on nutrient uptake.
     """
-    new_tips = set()
-    grid_size = M.shape[0]
+    new_tips = {}
+    cell_id = max(tips.keys()) + 1 if tips else 2
+    grid_size = grid.shape[0]
 
-    def neighbors(i, j):
-        dirs = [(1, 0), (0, -1), (0, 1)]  # Down, Left, Right. Up direction is removed due to gravity. 
-        valid = []
-        for di, dj in dirs:
-            ni, nj = i + di, j + dj
-            if 0 <= ni < grid_size and 0 <= nj < grid_size and M[ni, nj] == 0:
-                valid.append((ni, nj))
-        return valid
+    for tid, (i, j, gen, is_main) in tips.items():
+        if i == grid_size - 1:
+            break
+        if (P[i, j] > params["nutrient_threshold"]) or (N[i, j] > params["nutrient_threshold"]):
+            continue
 
-    for i, j in tips:
-        grew = False
-        for ni, nj in neighbors(i, j):
-            uptake_G = p["mu"] * G[ni, nj] / (p["K_m"] + G[ni, nj]) - p["lambda"] * M[ni, nj]
-            uptake_P = uptake_G # TODO: will change, for now assume same uptake for both nutrients
-            growth_rate = (uptake_G + uptake_P)
-            growth_rate = np.clip(growth_rate, 0, 1)  # Ensure growth rate is between 0 and 1
-            if G[ni, nj] < 1/3: 
-                p["branch_prob"] = p["branch_prob_3"]
-            elif G[ni, nj] < 2/3:
-                p["branch_prob"] = p["branch_prob_2"]
-            else:
-                p["branch_prob"] = p["branch_prob_1"]
+        neighbors = get_neighbors(i, j, grid_size)
+        candidates = [pos for pos in neighbors if grid[pos] == 0]
+        if not candidates:
+            continue
 
-            if np.random.rand() < growth_rate:
-                M[ni, nj] = 1 
-                new_tips.add((ni, nj))
-                grew = True  
-        
-        if grew and np.random.rand() < p["branch_prob"]:
-            new_tips.add((i, j)) 
+        if is_main:
+            candidates = [pos for pos in candidates if pos[0] > i] or candidates
 
-    return M, new_tips
+        scored = [(pos, calculate_energy(pos[0], pos[1], P, N, params)) for pos in candidates]
+        scored.sort(key=lambda x: x[1])
+        best = scored[0][0]
+        grid[best] = 1
+        new_tips[cell_id] = (best[0], best[1], gen, is_main)
+        cell_id += 1
 
+        if np.random.rand() < params["branch_prob"] and gen < params["max_branch_depth"]:
+            branch_dirs = [(-1, -1), (-1, 1), (0, -1), (0, 1)]
+            random.shuffle(branch_dirs)
+            for di, dj in branch_dirs:
+                ni, nj = i + di, j + dj
+                if 0 <= ni < grid_size and 0 <= nj < grid_size and grid[ni, nj] == 0:
+                    grid[ni, nj] = 1
+                    new_tips[cell_id] = (ni, nj, gen + 1, False)
+                    cell_id += 1
+                    break
 
-def animate_simulation(G, M, tips, p, num_frames=300):
+    return grid, new_tips
+
+def animate_simulation(P, N, M, tips, params, num_frames=400):
     fig, ax = plt.subplots()
-    ax.set_title("Branching Hyphae (Brown) and Nutrients (Pink)")
-    im = ax.imshow(np.zeros((p["grid_size"], p["grid_size"], 3)))
+    im = ax.imshow(np.zeros((params["grid_size"], params["grid_size"], 3)))
 
     def update(frame):
-        nonlocal G, M, tips
-        G = update_nutrients(p["grid_size"], G, M, p)
-        M, new_tips = grow_tips(M, G, tips, p)
+        nonlocal P, N, M, tips
+        # Solve steady-state nutrient fields given current biomass M
+        P = steady_state_nutrient(P, M, params, nutrient_type='P')
+        N = steady_state_nutrient(N, M, params, nutrient_type='N')
 
-        def is_tip(i, j, M):
-            # Check if there's any biomass directly below the specified position
-            grid_size = M.shape[0]
-            for ni in range(i + 1, grid_size):
-                if M[ni, j] == 1:
-                    return False
-            return True
+        M, tips = grow_tips(M, P, N, tips, params)
 
-        tips = new_tips.union(tips)
-        tips = set(filter(lambda tip: is_tip(*tip, M), tips)) # Filter tips to only include bottom tips
-
-        rgb_image = np.ones((p["grid_size"], p["grid_size"], 3))
-        rgb_image[..., 0] *= 0.4
-        rgb_image[..., 1] *= 0.26
-        rgb_image[..., 2] *= 0.13
-
-        nutrient_blue = G
-        nutrient_red = G
-        rgb_image[..., 0] += nutrient_red
-        rgb_image[..., 2] += nutrient_blue
+        rgb_image = np.ones((params["grid_size"], params["grid_size"], 3)) * [0.4, 0.26, 0.13]
+        rgb_image[..., 0] += P
+        rgb_image[..., 2] += N
         rgb_image = np.clip(rgb_image, 0, 1)
 
-        for i in range(p["grid_size"]):
-            for j in range(p["grid_size"]):
-                if M[i, j] == 1:
+        for i in range(params["grid_size"]):
+            for j in range(params["grid_size"]):
+                if M[i, j] > 0:
                     rgb_image[i, j] = [0.8, 0.52, 0.25]
 
-        for i, j in tips:
+        for tid, (i, j, _, _) in tips.items():
             rgb_image[i, j] = [1, 1, 1]
 
         im.set_array(rgb_image)
         return [im]
 
     ani = FuncAnimation(fig, update, frames=num_frames, blit=True)
+    plt.title("Mycelium Growth Simulation")
     plt.show()
 
 if __name__ == "__main__":
-    nutrient_grid, root_grid, tips = initialise_grids(params["grid_size"])
-    animate_simulation(nutrient_grid, root_grid, tips, params, num_frames=400)
+    P, N, M, tips = initialise_grids(params["grid_size"])
+    animate_simulation(P, N, M, tips, params, num_frames=400)
