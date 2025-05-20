@@ -5,22 +5,22 @@ from matplotlib.animation import FuncAnimation
 import random
 
 params = {
-    "grid_size": 100,
-    "dt": 0.2,
-    "D_P": 0.5,
-    "D_N": 0.6,
-    "V_max_P": 0.6,
-    "V_max_N": 0.8,
-    "K_m_P": 0.3,
-    "K_m_N": 0.2,
-    "mu": 0.9,
-    "lambda": 0.05,
-    "branch_prob": 0.07,
-    "adhesion": 0.1,
-    "volume_constraint": 0.01,
-    "chemotaxis_strength": 3.0,
-    "max_branch_depth": 5,
-    "nutrient_threshold": 0.7  # Stop tip if nutrient is high enough
+    "grid_size": 100, # Size of the grid
+    "dt": 0.2, # Time step for the simulation
+    "D_P": 0.5, # Diffusion coefficient for phosphate
+    "D_N": 0.6, # Diffusion coefficient for nitrogen
+    "V_max_P": 0.6, # Maximum uptake rate for phosphate
+    "V_max_N": 0.8, # Maximum uptake rate for nitrogen
+    "K_m_P": 0.3, # Half-saturation constant for phosphate
+    "K_m_N": 0.2, # Half-saturation constant for nitrogen
+    "mu": 0.9, # Growth rate of the mycelium
+    "lambda": 0.05, # Decay rate of the mycelium
+    "branch_prob": 0.07, # Probability of branching
+    "adhesion": 0.1, # Adhesion strength
+    "volume_constraint": 0.01, # Volume constraint for the cells
+    "chemotaxis_strength": 3.0, # Strength of chemotaxis
+    "max_branch_depth": 5, # Maximum depth of branching, restricts length of mycelium
+    "nutrient_threshold": 0.7 # Threshold for nutrient concentration to stop growth
 }
 
 def initialise_grids(grid_size):
